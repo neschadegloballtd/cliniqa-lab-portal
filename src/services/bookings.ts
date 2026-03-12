@@ -1,0 +1,48 @@
+import api from "@/lib/api";
+import type { ApiResponse, PagedResponse } from "@/types/api";
+import type { Booking, BookingStatus, CreateBookingRequest } from "@/types/bookings";
+
+const BASE = "/lab/v1/bookings";
+
+export const bookingsService = {
+  list(params?: {
+    status?: BookingStatus | "ALL";
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    size?: number;
+  }): Promise<ApiResponse<PagedResponse<Booking>>> {
+    const { status, ...rest } = params ?? {};
+    return api
+      .get(BASE, { params: { ...rest, ...(status && status !== "ALL" ? { status } : {}) } })
+      .then((r) => r.data);
+  },
+
+  get(id: string): Promise<ApiResponse<Booking>> {
+    return api.get(`${BASE}/${id}`).then((r) => r.data);
+  },
+
+  create(data: CreateBookingRequest): Promise<ApiResponse<Booking>> {
+    return api.post(BASE, data).then((r) => r.data);
+  },
+
+  confirm(id: string): Promise<ApiResponse<Booking>> {
+    return api.patch(`${BASE}/${id}/confirm`).then((r) => r.data);
+  },
+
+  markSampleCollected(id: string): Promise<ApiResponse<Booking>> {
+    return api.patch(`${BASE}/${id}/sample-collected`).then((r) => r.data);
+  },
+
+  complete(id: string): Promise<ApiResponse<Booking>> {
+    return api.patch(`${BASE}/${id}/complete`).then((r) => r.data);
+  },
+
+  cancel(id: string): Promise<ApiResponse<Booking>> {
+    return api.patch(`${BASE}/${id}/cancel`).then((r) => r.data);
+  },
+
+  noShow(id: string): Promise<ApiResponse<Booking>> {
+    return api.patch(`${BASE}/${id}/no-show`).then((r) => r.data);
+  },
+};
