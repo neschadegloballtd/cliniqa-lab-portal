@@ -13,10 +13,18 @@ const KEYS = {
   pushStatus: (jobId: string) => ["push-status", jobId] as const,
 };
 
-export function useReports(page = 0, size = 20) {
+export function useReports(
+  page = 0,
+  size = 20,
+  search?: string,
+  flagStatus?: string,
+  processingStatus?: string,
+  dateFrom?: string,
+  dateTo?: string,
+) {
   return useQuery({
-    queryKey: [...KEYS.reports, page, size],
-    queryFn: () => resultsService.listReports(page, size),
+    queryKey: [...KEYS.reports, page, size, search, flagStatus, processingStatus, dateFrom, dateTo],
+    queryFn: () => resultsService.listReports(page, size, search, flagStatus, processingStatus, dateFrom, dateTo),
     select: (data) => data.data,
   });
 }

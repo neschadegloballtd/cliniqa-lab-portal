@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useReports } from "@/hooks/useResults";
@@ -54,7 +54,39 @@ function FlagBadge({ status }: { status?: FlagStatus }) {
 
 export default function ResultsPage() {
   const [page, setPage] = useState(0);
-  const { data, isLoading, isError } = useReports(page);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");          // debounced
+  const [flagStatus, setFlagStatus] = useState("");
+  const [processingStatus, setProcessingStatus] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // Debounce: only fire the query 400 ms after the user stops typing
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(0);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // Reset page when any filter changes
+  const handleFlagStatus = (v: string) => { setFlagStatus(v); setPage(0); };
+  const handleProcStatus = (v: string) => { setProcessingStatus(v); setPage(0); };
+  const handleDateFrom   = (v: string) => { setDateFrom(v);   setPage(0); };
+  const handleDateTo     = (v: string) => { setDateTo(v);     setPage(0); };
+
+  const { data, isLoading, isError } = useReports(
+    page,
+    20,
+    search || undefined,
+    flagStatus || undefined,
+    processingStatus || undefined,
+    dateFrom || undefined,
+    dateTo || undefined,
+  );
+
+  const hasFilters = !!search || !!flagStatus || !!processingStatus || !!dateFrom || !!dateTo;
 
   return (
     <div className="space-y-6">
@@ -66,6 +98,87 @@ export default function ResultsPage() {
         >
           + Push Results
         </Link>
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Search by phone or email */}
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <span className="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm">🔍</span>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search by phone or email…"
+            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-4 text-sm focus:border-blue-500 focus:outline-none"
+          />
+          {searchInput && (
+            <button
+              onClick={() => { setSearchInput(""); setSearch(""); setPage(0); }}
+              className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 text-xs"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {/* Flag status filter */}
+        <select
+          value={flagStatus}
+          onChange={(e) => handleFlagStatus(e.target.value)}
+          className="rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+        >
+          <option value="">All flag statuses</option>
+          <option value="PENDING_REVIEW">Pending Review</option>
+          <option value="REVIEWED_NORMAL">Reviewed — Normal</option>
+          <option value="REVIEWED_CRITICAL">Reviewed — Critical</option>
+          <option value="AUTO_PUBLISHED">Auto Published</option>
+          <option value="OVERRIDDEN">Overridden</option>
+        </select>
+
+        {/* Processing status filter */}
+        <select
+          value={processingStatus}
+          onChange={(e) => handleProcStatus(e.target.value)}
+          className="rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+        >
+          <option value="">All statuses</option>
+          <option value="CONFIRMED">Confirmed</option>
+          <option value="EXTRACTED">Extracted (PDF)</option>
+          <option value="PENDING_CLAIM">Awaiting Patient</option>
+          <option value="FAILED">Failed</option>
+        </select>
+
+        {/* Date range filter */}
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-gray-500 whitespace-nowrap">From</label>
+          <input
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => handleDateFrom(e.target.value)}
+            className="rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-gray-500 whitespace-nowrap">To</label>
+          <input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => handleDateTo(e.target.value)}
+            className="rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+
+        {hasFilters && (
+          <button
+            onClick={() => { setSearchInput(""); setSearch(""); setFlagStatus(""); setProcessingStatus(""); setDateFrom(""); setDateTo(""); setPage(0); }}
+            className="text-sm text-blue-600 hover:underline whitespace-nowrap"
+          >
+            Clear filters
+          </button>
+        )}
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
