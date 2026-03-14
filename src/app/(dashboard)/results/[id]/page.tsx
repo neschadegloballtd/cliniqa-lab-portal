@@ -45,6 +45,39 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/**
+ * Hover tooltip — wraps any trigger element and shows a dark popup on hover.
+ * Popup opens below the trigger by default; pass side="above" to flip it.
+ */
+function InfoTooltip({
+  trigger,
+  children,
+  side = "below",
+}: {
+  trigger: React.ReactNode;
+  children: React.ReactNode;
+  side?: "above" | "below";
+}) {
+  return (
+    <div className="relative group inline-flex items-center">
+      {trigger}
+      <div
+        className={`absolute z-50 w-80 rounded-xl bg-gray-900 text-white text-xs shadow-2xl p-4
+          opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150
+          pointer-events-none
+          ${side === "above" ? "bottom-full mb-2 left-0" : "top-full mt-2 left-0"}`}
+      >
+        {/* Arrow */}
+        <div
+          className={`absolute w-2.5 h-2.5 bg-gray-900 rotate-45 left-4
+            ${side === "above" ? "top-full -translate-y-1.5" : "bottom-full translate-y-1.5"}`}
+        />
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /** Converts a raw OCR status/value to a readable label.
  *  e.g. HIGH_SENSITIVE → High Sensitive, NORMAL → Normal */
 function fmt(value: string | undefined | null): string {
@@ -131,12 +164,28 @@ function RowEditor({ row, reportId, layout, canEdit, outlierMap }: RowEditorProp
     <td className="px-4 py-3 align-top">
       {row.manuallyCorrected && <span className="text-xs text-yellow-600 block">✎ corrected</span>}
       {outlier && (
-        <span className={`text-xs block mt-0.5 ${
-          outlier.deviation === "SEVERE" ? "text-red-600" :
-          outlier.deviation === "MODERATE" ? "text-orange-600" : "text-yellow-700"
-        }`}>
-          ⚠ {outlier.note}
-        </span>
+        <InfoTooltip
+          side="above"
+          trigger={
+            <span className={`text-xs cursor-help underline decoration-dotted ${
+              outlier.deviation === "SEVERE"   ? "text-red-600" :
+              outlier.deviation === "MODERATE" ? "text-orange-600" :
+                                                 "text-yellow-700"
+            }`}>
+              ⚠ {outlier.deviation.charAt(0) + outlier.deviation.slice(1).toLowerCase()} deviation
+            </span>
+          }
+        >
+          <p className="font-semibold text-white mb-1">{row.testName}</p>
+          <p className="text-gray-300 leading-relaxed">{outlier.note}</p>
+          <p className="text-gray-500 mt-2 text-xs">
+            Deviation: <span className={`font-medium ${
+              outlier.deviation === "SEVERE"   ? "text-red-400" :
+              outlier.deviation === "MODERATE" ? "text-orange-400" :
+                                                 "text-yellow-400"
+            }`}>{outlier.deviation}</span>
+          </p>
+        </InfoTooltip>
       )}
     </td>
   );
@@ -503,11 +552,64 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
         </div>
       )}
       {report.flagStatus === "PENDING_REVIEW" && (
-        <div className="flex items-center gap-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
-          <span className="text-amber-500 text-lg">⚠</span>
-          <div>
-            <p className="text-sm font-medium text-amber-800">AI flagged this result as potentially critical</p>
-            <p className="text-xs text-amber-600 mt-0.5">Review the results below, then publish or override the flag.</p>
+        <div className="flex items-start gap-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+          <span className="text-amber-500 text-lg mt-0.5">⚠</span>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-medium text-amber-800">
+                AI flagged this result as potentially {report.severityHint?.toLowerCase() ?? "critical"}
+              </p>
+              <InfoTooltip
+                side="below"
+                trigger={
+                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-amber-500 text-amber-600 text-xs font-bold cursor-help leading-none">
+                    ?
+                  </span>
+                }
+              >
+                <p className="font-semibold text-white mb-2">Why was this flagged?</p>
+                <p className="text-gray-300 leading-relaxed mb-3">
+                  {report.llmSummary ?? "The AI detected values that may require clinical attention before publishing to the patient."}
+                </p>
+
+                {(report.outliers?.length ?? 0) > 0 && (
+                  <div className="mb-3">
+                    <p className="font-semibold text-yellow-400 mb-1.5">
+                      {report.outliers!.length} out-of-range result{report.outliers!.length > 1 ? "s" : ""}:
+                    </p>
+                    <ul className="space-y-1.5">
+                      {report.outliers!.map((o, i) => (
+                        <li key={i} className="flex gap-1.5">
+                          <span className={`shrink-0 mt-0.5 ${
+                            o.deviation === "SEVERE"   ? "text-red-400" :
+                            o.deviation === "MODERATE" ? "text-orange-400" :
+                                                         "text-yellow-400"
+                          }`}>●</span>
+                          <span className="leading-snug">
+                            <span className="font-medium text-white">{o.testName}</span>
+                            {" — "}{o.note}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {(report.dataQualityWarnings?.length ?? 0) > 0 && (
+                  <p className="text-gray-400 border-t border-gray-700 pt-2 mt-1">
+                    ⚠ {report.dataQualityWarnings!.length} data quality issue{report.dataQualityWarnings!.length > 1 ? "s" : ""} also detected — see below the table.
+                  </p>
+                )}
+
+                <p className="text-gray-500 border-t border-gray-700 pt-2 mt-2 text-xs">
+                  Severity: <span className="text-white font-medium">{report.severityHint ?? "—"}</span>
+                  &nbsp;·&nbsp;Review the highlighted rows below, then Publish or Override.
+                </p>
+              </InfoTooltip>
+            </div>
+            <p className="text-xs text-amber-600 mt-0.5">
+              Review the highlighted rows below, then publish or override the flag.
+            </p>
           </div>
         </div>
       )}
@@ -529,15 +631,28 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                                                "bg-green-50 border-green-200"
         }`}>
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${
-              report.severityHint === "CRITICAL" ? "bg-red-100 text-red-700" :
-              report.severityHint === "MODERATE" ? "bg-orange-100 text-orange-700" :
-              report.severityHint === "MILD"     ? "bg-yellow-100 text-yellow-700" :
-                                                   "bg-green-100 text-green-700"
-            }`}>
-              AI · {report.severityHint}
-            </span>
-            <span className="text-xs text-gray-500">Quality screening summary</span>
+            <InfoTooltip
+              side="below"
+              trigger={
+                <span className={`text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full cursor-help ${
+                  report.severityHint === "CRITICAL" ? "bg-red-100 text-red-700" :
+                  report.severityHint === "MODERATE" ? "bg-orange-100 text-orange-700" :
+                  report.severityHint === "MILD"     ? "bg-yellow-100 text-yellow-700" :
+                                                       "bg-green-100 text-green-700"
+                }`}>
+                  AI · {report.severityHint}
+                </span>
+              }
+            >
+              <p className="font-semibold text-white mb-2">Severity levels explained</p>
+              <ul className="space-y-1.5 text-gray-300">
+                <li><span className="text-green-400 font-medium">NORMAL</span> — all values within reference range; no action required.</li>
+                <li><span className="text-yellow-400 font-medium">MILD</span> — minor deviations; watch-and-wait, no urgent action.</li>
+                <li><span className="text-orange-400 font-medium">MODERATE</span> — significant deviations; follow-up recommended.</li>
+                <li><span className="text-red-400 font-medium">CRITICAL</span> — potentially life-threatening values; urgent clinical review required before publishing.</li>
+              </ul>
+            </InfoTooltip>
+            <span className="text-xs text-gray-500">AI quality screening summary</span>
           </div>
           <p className={`text-sm ${
             report.severityHint === "CRITICAL" ? "text-red-800" :
