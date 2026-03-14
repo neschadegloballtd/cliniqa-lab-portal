@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useCreateBooking } from "@/hooks/useBookings";
+import { useTestMenu } from "@/hooks/useProfile";
 
 const schema = z
   .object({
@@ -26,10 +27,13 @@ type FormData = z.infer<typeof schema>;
 export default function NewBookingPage() {
   const router = useRouter();
   const { mutateAsync: createBooking, isPending } = useCreateBooking();
+  const { data: testMenu } = useTestMenu();
+  const activeTests = testMenu?.filter((t) => t.isActive) ?? [];
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
@@ -104,12 +108,31 @@ export default function NewBookingPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700">Test Name *</label>
-              <input
-                type="text"
-                placeholder="e.g. Full Blood Count"
-                {...register("testName")}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+              {activeTests.length > 0 ? (
+                <select
+                  {...register("testName")}
+                  onChange={(e) => {
+                    setValue("testName", e.target.value);
+                    const selected = activeTests.find((t) => t.testName === e.target.value);
+                    if (selected) setValue("testCategory", selected.testCategory);
+                  }}
+                  className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                >
+                  <option value="">— Select test —</option>
+                  {activeTests.map((t) => (
+                    <option key={t.id} value={t.testName}>
+                      {t.testName}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="e.g. Full Blood Count"
+                  {...register("testName")}
+                  className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              )}
               {errors.testName && (
                 <p className="mt-1 text-xs text-red-600">{errors.testName.message}</p>
               )}
@@ -120,8 +143,14 @@ export default function NewBookingPage() {
                 type="text"
                 placeholder="e.g. Haematology"
                 {...register("testCategory")}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                readOnly={activeTests.length > 0}
+                className={`mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                  activeTests.length > 0 ? "bg-gray-50 text-gray-500 cursor-default" : ""
+                }`}
               />
+              {activeTests.length > 0 && (
+                <p className="mt-1 text-xs text-gray-400">Auto-filled from selected test</p>
+              )}
             </div>
           </div>
         </fieldset>
