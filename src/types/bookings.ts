@@ -6,6 +6,9 @@ export type BookingStatus =
   | "CANCELLED"
   | "NO_SHOW";
 
+export type PaymentStatus = "UNPAID" | "PAID" | "WAIVED";
+export type PaymentMethod = "CASH" | "POS" | "BANK_TRANSFER" | "ONLINE";
+
 export interface Booking {
   id: string;
   patientId?: string;
@@ -16,9 +19,18 @@ export interface Booking {
   appointmentAt?: string;
   patientNotes?: string;
   labNotes?: string;
+  paymentStatus: PaymentStatus;
+  paymentMethod?: PaymentMethod;
+  amountKobo?: number;
+  paidAt?: string;
   status: BookingStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MarkPaidRequest {
+  paymentMethod: PaymentMethod;
+  amountKobo?: number;
 }
 
 export interface CreateBookingRequest {

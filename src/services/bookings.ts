@@ -1,6 +1,6 @@
 import api from "@/lib/api";
 import type { ApiResponse, PagedResponse } from "@/types/api";
-import type { Booking, BookingStatus, CreateBookingRequest } from "@/types/bookings";
+import type { Booking, BookingStatus, CreateBookingRequest, MarkPaidRequest } from "@/types/bookings";
 
 const BASE = "/lab/v1/bookings";
 
@@ -44,5 +44,17 @@ export const bookingsService = {
 
   noShow(id: string): Promise<ApiResponse<Booking>> {
     return api.patch(`${BASE}/${id}/no-show`).then((r) => r.data);
+  },
+
+  markPaid(id: string, data: MarkPaidRequest): Promise<ApiResponse<Booking>> {
+    return api.patch(`${BASE}/${id}/mark-paid`, data).then((r) => r.data);
+  },
+
+  markWaived(id: string): Promise<ApiResponse<Booking>> {
+    return api.patch(`${BASE}/${id}/mark-waived`).then((r) => r.data);
+  },
+
+  searchByContact(phone?: string, email?: string): Promise<ApiResponse<Booking[]>> {
+    return api.get(`${BASE}/search`, { params: { phone, email } }).then((r) => r.data);
   },
 };

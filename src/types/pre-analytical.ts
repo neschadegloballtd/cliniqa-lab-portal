@@ -1,25 +1,22 @@
+// Must exactly match PreAnalyticalRejectionReason enum on the backend
 export type RejectionReason =
   | "HAEMOLYSED"
   | "CLOTTED"
   | "INSUFFICIENT_VOLUME"
   | "WRONG_CONTAINER"
-  | "UNLABELLED"
-  | "MISLABELLED"
-  | "DAMAGED_CONTAINER"
-  | "TEMPERATURE_BREACH"
-  | "DELAYED_TRANSPORT"
+  | "IMPROPER_LABELLING"
+  | "WRONG_TEMPERATURE"
+  | "CONTAMINATED"
   | "OTHER";
 
 export const REJECTION_REASON_LABELS: Record<RejectionReason, string> = {
   HAEMOLYSED: "Haemolysed",
-  CLOTTED: "Clotted",
+  CLOTTED: "Clotted / Coagulated",
   INSUFFICIENT_VOLUME: "Insufficient Volume",
   WRONG_CONTAINER: "Wrong Container",
-  UNLABELLED: "Unlabelled",
-  MISLABELLED: "Mislabelled",
-  DAMAGED_CONTAINER: "Damaged Container",
-  TEMPERATURE_BREACH: "Temperature Breach",
-  DELAYED_TRANSPORT: "Delayed Transport",
+  IMPROPER_LABELLING: "Improper Labelling (Unlabelled / Mislabelled)",
+  WRONG_TEMPERATURE: "Wrong Temperature / Temperature Breach",
+  CONTAMINATED: "Contaminated / Damaged",
   OTHER: "Other",
 };
 
@@ -41,13 +38,13 @@ export interface PreAnalyticalError {
 }
 
 export interface LogPreAnalyticalErrorRequest {
+  patientId?: string;
+  bookingId?: string;
   rejectionReason: RejectionReason;
-  patientPhone?: string;
-  patientEmail?: string;
-  sampleType: string;
-  testName: string;
+  sampleType?: string;
+  testName?: string;
   resampleBy?: string;
-  notes?: string;
+  rejectionNotes?: string;
 }
 
 export interface ResolvePreAnalyticalErrorRequest {

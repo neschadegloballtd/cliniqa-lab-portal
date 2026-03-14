@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { bookingsService } from "@/services/bookings";
-import type { BookingStatus, CreateBookingRequest } from "@/types/bookings";
+import type { BookingStatus, CreateBookingRequest, MarkPaidRequest } from "@/types/bookings";
 
 const KEYS = {
   all: ["bookings"] as const,
@@ -69,4 +69,29 @@ export function useCancelBooking(id: string) {
 
 export function useNoShowBooking(id: string) {
   return useBookingAction(bookingsService.noShow, id);
+}
+
+export function useMarkPaid(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: MarkPaidRequest) => bookingsService.markPaid(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.detail(id) });
+      qc.invalidateQueries({ queryKey: KEYS.all });
+    },
+  });
+}
+
+export function useMarkWaived(id: string) {
+  return useBookingAction(bookingsService.markWaived, id);
+}
+
+export function useBookingsByContact(phone?: string, email?: string) {
+  return useQuery({
+    queryKey: ["bookings", "search", phone, email] as const,
+    queryFn: () => bookingsService.searchByContact(phone, email),
+    select: (data) => data.data,
+    enabled: !!(phone || email),
+    staleTime: 30_000,
+  });
 }

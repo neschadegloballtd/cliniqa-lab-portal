@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -11,8 +11,11 @@ import {
   useCompleteBooking,
   useCancelBooking,
   useNoShowBooking,
+  useMarkPaid,
+  useMarkWaived,
 } from "@/hooks/useBookings";
-import type { BookingStatus } from "@/types/bookings";
+import type { BookingStatus, PaymentMethod } from "@/types/bookings";
+import { useTestMenu } from "@/hooks/useProfile";
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
   PENDING: "bg-yellow-100 text-yellow-800",
@@ -57,6 +60,13 @@ function ActionButton({ label, onClick, isPending, variant = "primary" }: Action
   );
 }
 
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CASH: "Cash",
+  POS: "POS",
+  BANK_TRANSFER: "Bank Transfer",
+  ONLINE: "Online",
+};
+
 export default function BookingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -67,6 +77,21 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
   const { mutateAsync: complete, isPending: isCompleting } = useCompleteBooking(id);
   const { mutateAsync: cancel, isPending: isCancelling } = useCancelBooking(id);
   const { mutateAsync: noShow, isPending: isNoShow } = useNoShowBooking(id);
+  const { mutateAsync: markPaid, isPending: isMarkingPaid } = useMarkPaid(id);
+  const { mutateAsync: markWaived, isPending: isMarkingWaived } = useMarkWaived(id);
+  const { data: testMenu } = useTestMenu();
+
+  const [showPayForm, setShowPayForm] = useState(false);
+  const [payMethod, setPayMethod] = useState<PaymentMethod>("CASH");
+  const [payAmount, setPayAmount] = useState("");
+
+  const openPayForm = () => {
+    const match = testMenu?.find((t) =>
+      booking?.testMenuItemId ? t.id === booking.testMenuItemId : t.testName === booking?.testName
+    );
+    if (match?.priceKobo) setPayAmount((match.priceKobo / 100).toString());
+    setShowPayForm(true);
+  };
 
   const act = (label: string, fn: () => Promise<unknown>) => async () => {
     try {
@@ -108,9 +133,11 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
           <div>
             <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Patient</dt>
             <dd className="mt-0.5 text-sm text-gray-900">
-              {booking.patientPhone && <span className="block">{booking.patientPhone}</span>}
-              {booking.patientEmail && <span className="block">{booking.patientEmail}</span>}
-              {!booking.patientPhone && !booking.patientEmail && "—"}
+              {booking.pendingPatientPhone && <span className="block">{booking.pendingPatientPhone}</span>}
+              {booking.pendingPatientEmail && <span className="block">{booking.pendingPatientEmail}</span>}
+              {!booking.pendingPatientPhone && !booking.pendingPatientEmail && (
+                <span className="text-gray-400">Registered patient</span>
+              )}
             </dd>
           </div>
           <div>
@@ -133,10 +160,16 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
               {format(new Date(booking.updatedAt), "dd MMM yyyy, HH:mm")}
             </dd>
           </div>
-          {booking.notes && (
+          {booking.patientNotes && (
             <div className="col-span-full">
-              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Notes</dt>
-              <dd className="mt-0.5 text-sm text-gray-900">{booking.notes}</dd>
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Patient Notes</dt>
+              <dd className="mt-0.5 text-sm text-gray-900">{booking.patientNotes}</dd>
+            </div>
+          )}
+          {booking.labNotes && (
+            <div className="col-span-full">
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Lab Notes</dt>
+              <dd className="mt-0.5 text-sm text-gray-900">{booking.labNotes}</dd>
             </div>
           )}
         </dl>
@@ -192,6 +225,127 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             </li>
           )}
         </ol>
+      </div>
+
+      {/* Payment card */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Payment</h2>
+          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+            booking.paymentStatus === "PAID"
+              ? "bg-green-100 text-green-800"
+              : booking.paymentStatus === "WAIVED"
+              ? "bg-gray-100 text-gray-600"
+              : "bg-red-100 text-red-700"
+          }`}>
+            {booking.paymentStatus === "PAID" ? "Paid" : booking.paymentStatus === "WAIVED" ? "Waived" : "Unpaid"}
+          </span>
+        </div>
+
+        {booking.paymentStatus === "PAID" && (
+          <dl className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Method</dt>
+              <dd className="mt-0.5 text-gray-900">{PAYMENT_METHOD_LABELS[booking.paymentMethod!]}</dd>
+            </div>
+            {booking.amountKobo != null && (
+              <div>
+                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Amount</dt>
+                <dd className="mt-0.5 text-gray-900">₦{(booking.amountKobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 })}</dd>
+              </div>
+            )}
+            {booking.paidAt && (
+              <div className="col-span-full">
+                <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">Paid at</dt>
+                <dd className="mt-0.5 text-gray-900">{format(new Date(booking.paidAt), "dd MMM yyyy, HH:mm")}</dd>
+              </div>
+            )}
+          </dl>
+        )}
+
+        {booking.paymentStatus === "UNPAID" && !isTerminal && (
+          <div className="space-y-3">
+            {!showPayForm ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={openPayForm}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                >
+                  Mark as Paid
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await markWaived();
+                      toast.success("Payment waived");
+                    } catch {
+                      toast.error("Failed to waive payment");
+                    }
+                  }}
+                  disabled={isMarkingWaived}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {isMarkingWaived ? "…" : "Waive"}
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600">Payment Method *</label>
+                    <select
+                      value={payMethod}
+                      onChange={(e) => setPayMethod(e.target.value as PaymentMethod)}
+                      className="mt-1 block w-full rounded border border-gray-300 px-2 py-1.5 text-sm bg-white focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="CASH">Cash</option>
+                      <option value="POS">POS</option>
+                      <option value="BANK_TRANSFER">Bank Transfer</option>
+                      <option value="ONLINE">Online</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600">Amount (₦) — optional</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="e.g. 5000"
+                      value={payAmount}
+                      onChange={(e) => setPayAmount(e.target.value)}
+                      className="mt-1 block w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await markPaid({
+                          paymentMethod: payMethod,
+                          amountKobo: payAmount ? Math.round(parseFloat(payAmount) * 100) : undefined,
+                        });
+                        toast.success("Payment recorded");
+                        setShowPayForm(false);
+                      } catch {
+                        toast.error("Failed to record payment");
+                      }
+                    }}
+                    disabled={isMarkingPaid}
+                    className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {isMarkingPaid ? "Saving…" : "Confirm Payment"}
+                  </button>
+                  <button
+                    onClick={() => setShowPayForm(false)}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Action buttons — only shown for non-terminal statuses */}
