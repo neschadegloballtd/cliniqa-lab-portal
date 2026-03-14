@@ -144,7 +144,8 @@ export default function LogPreAnalyticalErrorPage() {
         rejectionReason: data.rejectionReason,
         sampleType: data.sampleType || undefined,
         testName: data.testName || undefined,
-        resampleBy: data.resampleBy || undefined,
+        // date input gives "YYYY-MM-DD"; backend expects OffsetDateTime ISO string
+        resampleBy: data.resampleBy ? `${data.resampleBy}T00:00:00Z` : undefined,
         rejectionNotes: data.rejectionNotes || undefined,
       });
       toast.success("Pre-analytical error logged");
