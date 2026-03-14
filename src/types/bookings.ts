@@ -8,12 +8,14 @@ export type BookingStatus =
 
 export interface Booking {
   id: string;
-  patientPhone?: string;
-  patientEmail?: string;
+  patientId?: string;
+  pendingPatientPhone?: string;
+  pendingPatientEmail?: string;
   testName: string;
   testCategory?: string;
   appointmentAt?: string;
-  notes?: string;
+  patientNotes?: string;
+  labNotes?: string;
   status: BookingStatus;
   createdAt: string;
   updatedAt: string;
@@ -25,5 +27,5 @@ export interface CreateBookingRequest {
   testName: string;
   testCategory?: string;
   appointmentAt?: string;
-  notes?: string;
+  patientNotes?: string;
 }

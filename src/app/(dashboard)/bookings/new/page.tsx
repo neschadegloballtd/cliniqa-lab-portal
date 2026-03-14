@@ -15,7 +15,7 @@ const schema = z
     testName: z.string().min(1, "Test name is required"),
     testCategory: z.string().optional(),
     appointmentAt: z.string().optional(),
-    notes: z.string().optional(),
+    patientNotes: z.string().optional(),
   })
   .refine((d) => d.patientPhone || d.patientEmail, {
     message: "Phone or email is required",
@@ -45,7 +45,7 @@ export default function NewBookingPage() {
         testName: data.testName,
         testCategory: data.testCategory || undefined,
         appointmentAt: data.appointmentAt || undefined,
-        notes: data.notes || undefined,
+        patientNotes: data.patientNotes || undefined,
       });
       toast.success("Booking created");
       router.push(`/bookings/${res.data?.id}`);
@@ -176,7 +176,7 @@ export default function NewBookingPage() {
           <textarea
             rows={3}
             placeholder="Any additional notes for the lab team…"
-            {...register("notes")}
+            {...register("patientNotes")}
             className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
