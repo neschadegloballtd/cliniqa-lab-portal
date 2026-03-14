@@ -83,6 +83,10 @@ export interface LabReportDetailDto {
   source: string;
   reportType?: string;
   processingStatus: ProcessingStatus;
+  /** null if AI QA hasn't run yet */
+  flagStatus?: FlagStatus;
+  /** Set once published to the patient */
+  publishedAt?: string;
   ocrConfidence?: number;
   reportDate?: string;
   labReportRef?: string;

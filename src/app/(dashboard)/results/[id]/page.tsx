@@ -68,9 +68,10 @@ interface RowEditorProps {
   row: LabResultRowDto;
   reportId: string;
   layout: TableLayout;
+  canEdit: boolean;
 }
 
-function RowEditor({ row, reportId, layout }: RowEditorProps) {
+function RowEditor({ row, reportId, layout, canEdit }: RowEditorProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<LabResultRowUpdateRequest>({
     measuredValue: row.measuredValue,
@@ -109,9 +110,11 @@ function RowEditor({ row, reportId, layout }: RowEditorProps) {
 
   const editButton = (
     <td className="px-4 py-3 text-right text-sm">
-      <button onClick={() => setEditing(true)} className="text-blue-600 hover:underline text-xs">
-        Edit
-      </button>
+      {canEdit && (
+        <button onClick={() => setEditing(true)} className="text-blue-600 hover:underline text-xs">
+          Edit
+        </button>
+      )}
     </td>
   );
 
@@ -385,10 +388,15 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     return <div className="p-8 text-center text-sm text-red-600">Report not found.</div>;
   }
 
+  const isPublished = report.flagStatus === "AUTO_PUBLISHED" || !!report.publishedAt;
   const canConfirm = report.source === "LAB_PUSH_PDF" && report.processingStatus === "EXTRACTED";
-  const canPublish = ["PENDING_REVIEW", "SAVED", "REVIEWED_NORMAL", "REVIEWED_CRITICAL"].includes(
-    report.processingStatus
-  );
+  const canPublish =
+    !isPublished &&
+    !!report.flagStatus &&
+    ["PENDING_REVIEW", "REVIEWED_NORMAL", "REVIEWED_CRITICAL"].includes(report.flagStatus);
+  const canEdit =
+    !isPublished &&
+    ["EXTRACTED", "CONFIRMED", "PENDING_CLAIM"].includes(report.processingStatus);
 
   return (
     <div className="space-y-6">
@@ -465,6 +473,31 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
+      {/* AI flag status banner */}
+      {!report.flagStatus && ["CONFIRMED", "PENDING_CLAIM"].includes(report.processingStatus) && (
+        <div className="flex items-center gap-3 rounded-lg bg-gray-50 border border-gray-200 px-4 py-3">
+          <span className="text-gray-400">⟳</span>
+          <p className="text-sm text-gray-600">AI quality screening is running…</p>
+        </div>
+      )}
+      {report.flagStatus === "PENDING_REVIEW" && (
+        <div className="flex items-center gap-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+          <span className="text-amber-500 text-lg">⚠</span>
+          <div>
+            <p className="text-sm font-medium text-amber-800">AI flagged this result as potentially critical</p>
+            <p className="text-xs text-amber-600 mt-0.5">Review the results below, then publish or override the flag.</p>
+          </div>
+        </div>
+      )}
+      {isPublished && (
+        <div className="flex items-center gap-3 rounded-lg bg-green-50 border border-green-200 px-4 py-3">
+          <span className="text-green-600">✓</span>
+          <p className="text-sm text-green-700">
+            This report has been published — the patient can view their results.
+          </p>
+        </div>
+      )}
+
       {/* Results table */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
@@ -517,7 +550,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {report.results.map((row) => (
-                    <RowEditor key={row.id} row={row} reportId={reportId} layout={layout} />
+                    <RowEditor key={row.id} row={row} reportId={reportId} layout={layout} canEdit={canEdit} />
                   ))}
                 </tbody>
               </table>
