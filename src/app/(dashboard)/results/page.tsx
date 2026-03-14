@@ -58,6 +58,8 @@ export default function ResultsPage() {
   const [search, setSearch] = useState("");          // debounced
   const [flagStatus, setFlagStatus] = useState("");
   const [processingStatus, setProcessingStatus] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // Debounce: only fire the query 400 ms after the user stops typing
   useEffect(() => {
@@ -71,16 +73,20 @@ export default function ResultsPage() {
   // Reset page when any filter changes
   const handleFlagStatus = (v: string) => { setFlagStatus(v); setPage(0); };
   const handleProcStatus = (v: string) => { setProcessingStatus(v); setPage(0); };
+  const handleDateFrom   = (v: string) => { setDateFrom(v);   setPage(0); };
+  const handleDateTo     = (v: string) => { setDateTo(v);     setPage(0); };
 
   const { data, isLoading, isError } = useReports(
     page,
     20,
     search || undefined,
     flagStatus || undefined,
-    processingStatus || undefined
+    processingStatus || undefined,
+    dateFrom || undefined,
+    dateTo || undefined,
   );
 
-  const hasFilters = !!search || !!flagStatus || !!processingStatus;
+  const hasFilters = !!search || !!flagStatus || !!processingStatus || !!dateFrom || !!dateTo;
 
   return (
     <div className="space-y-6">
@@ -143,9 +149,31 @@ export default function ResultsPage() {
           <option value="FAILED">Failed</option>
         </select>
 
+        {/* Date range filter */}
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-gray-500 whitespace-nowrap">From</label>
+          <input
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => handleDateFrom(e.target.value)}
+            className="rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-gray-500 whitespace-nowrap">To</label>
+          <input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => handleDateTo(e.target.value)}
+            className="rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+
         {hasFilters && (
           <button
-            onClick={() => { setSearchInput(""); setSearch(""); setFlagStatus(""); setProcessingStatus(""); setPage(0); }}
+            onClick={() => { setSearchInput(""); setSearch(""); setFlagStatus(""); setProcessingStatus(""); setDateFrom(""); setDateTo(""); setPage(0); }}
             className="text-sm text-blue-600 hover:underline whitespace-nowrap"
           >
             Clear filters

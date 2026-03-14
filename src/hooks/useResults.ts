@@ -18,11 +18,13 @@ export function useReports(
   size = 20,
   search?: string,
   flagStatus?: string,
-  processingStatus?: string
+  processingStatus?: string,
+  dateFrom?: string,
+  dateTo?: string,
 ) {
   return useQuery({
-    queryKey: [...KEYS.reports, page, size, search, flagStatus, processingStatus],
-    queryFn: () => resultsService.listReports(page, size, search, flagStatus, processingStatus),
+    queryKey: [...KEYS.reports, page, size, search, flagStatus, processingStatus, dateFrom, dateTo],
+    queryFn: () => resultsService.listReports(page, size, search, flagStatus, processingStatus, dateFrom, dateTo),
     select: (data) => data.data,
   });
 }

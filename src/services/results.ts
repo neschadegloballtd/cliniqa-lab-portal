@@ -67,10 +67,12 @@ export const resultsService = {
     size = 20,
     search?: string,
     flagStatus?: string,
-    processingStatus?: string
+    processingStatus?: string,
+    dateFrom?: string,
+    dateTo?: string,
   ): Promise<ApiResponse<PagedResponse<LabReportSummaryDto>>> {
     return api
-      .get(BASE, { params: { page, size, search: search || undefined, flagStatus: flagStatus || undefined, processingStatus: processingStatus || undefined } })
+      .get(BASE, { params: { page, size, search: search || undefined, flagStatus: flagStatus || undefined, processingStatus: processingStatus || undefined, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined } })
       .then((r) => r.data);
   },
 
