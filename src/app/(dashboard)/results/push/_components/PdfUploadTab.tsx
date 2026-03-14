@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -55,9 +55,11 @@ export default function PdfUploadTab({ onSuccess }: Props) {
   });
 
   // Navigate to review page once OCR extraction completes
-  if (ocrStatus?.processingStatus === "EXTRACTED" && reportId) {
-    onSuccess(reportId);
-  }
+  useEffect(() => {
+    if (ocrStatus?.processingStatus === "EXTRACTED" && reportId) {
+      onSuccess(reportId);
+    }
+  }, [ocrStatus?.processingStatus, reportId, onSuccess]);
 
   const onSubmit = async (data: FormData) => {
     if (!selectedFile) {

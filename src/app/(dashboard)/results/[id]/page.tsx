@@ -45,6 +45,16 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/** Converts a raw OCR status value to a readable label.
+ *  e.g. HIGH_SENSITIVE → High Sensitive, NORMAL → Normal */
+function formatResultStatus(status: string | undefined): string {
+  if (!status) return "—";
+  return status
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 interface RowEditorProps {
   row: LabResultRowDto;
   reportId: string;
@@ -78,7 +88,7 @@ function RowEditor({ row, reportId }: RowEditorProps) {
         <td className="px-4 py-3 text-sm text-gray-900">{row.measuredValue}</td>
         <td className="px-4 py-3 text-sm text-gray-600">{row.unit ?? "—"}</td>
         <td className="px-4 py-3 text-sm text-gray-600">{row.referenceRangeText ?? "—"}</td>
-        <td className="px-4 py-3 text-sm text-gray-600">{row.status ?? "—"}</td>
+        <td className="px-4 py-3 text-sm text-gray-600">{formatResultStatus(row.status)}</td>
         <td className="px-4 py-3">
           {row.manuallyCorrected && (
             <span className="text-xs text-yellow-600">✎ corrected</span>
