@@ -141,6 +141,8 @@ export default function LogPreAnalyticalErrorPage() {
       const res = await logError({
         patientId: data.patientId || undefined,
         bookingId: data.bookingId || undefined,
+        pendingPatientPhone: data.patientPhone || undefined,
+        pendingPatientEmail: data.patientEmail || undefined,
         rejectionReason: data.rejectionReason,
         sampleType: data.sampleType || undefined,
         testName: data.testName || undefined,

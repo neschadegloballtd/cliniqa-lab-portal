@@ -22,24 +22,27 @@ export const REJECTION_REASON_LABELS: Record<RejectionReason, string> = {
 
 export interface PreAnalyticalError {
   id: string;
+  patientId?: string;
+  bookingId?: string;
+  pendingPatientPhone?: string;
+  pendingPatientEmail?: string;
   rejectionReason: RejectionReason;
-  patientPhone?: string;
-  patientEmail?: string;
-  sampleType: string;
-  testName: string;
+  rejectionNotes?: string;
+  sampleType?: string;
+  testName?: string;
   resampleBy?: string;
-  notes?: string;
   resolved: boolean;
   resolvedAt?: string;
-  resolutionNotes?: string;
   patientNotified: boolean;
-  patientNotifiedAt?: string;
+  notifiedAt?: string;
   createdAt: string;
 }
 
 export interface LogPreAnalyticalErrorRequest {
   patientId?: string;
   bookingId?: string;
+  pendingPatientPhone?: string;
+  pendingPatientEmail?: string;
   rejectionReason: RejectionReason;
   sampleType?: string;
   testName?: string;
