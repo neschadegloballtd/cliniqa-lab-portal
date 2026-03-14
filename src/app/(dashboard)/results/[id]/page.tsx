@@ -12,7 +12,7 @@ import {
   usePublishReport,
   useOverrideFlag,
 } from "@/hooks/useResults";
-import type { LabResultRowDto, LabResultRowUpdateRequest } from "@/types/results";
+import type { AiOutlier, LabResultRowDto, LabResultRowUpdateRequest } from "@/types/results";
 
 function SourceBadge({ source }: { source: string }) {
   const map: Record<string, string> = {
@@ -69,9 +69,11 @@ interface RowEditorProps {
   reportId: string;
   layout: TableLayout;
   canEdit: boolean;
+  outlierMap: Map<string, AiOutlier>;
 }
 
-function RowEditor({ row, reportId, layout, canEdit }: RowEditorProps) {
+function RowEditor({ row, reportId, layout, canEdit, outlierMap }: RowEditorProps) {
+  const outlier = outlierMap.get(row.testName.trim().toLowerCase());
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<LabResultRowUpdateRequest>({
     measuredValue: row.measuredValue,
@@ -81,7 +83,14 @@ function RowEditor({ row, reportId, layout, canEdit }: RowEditorProps) {
   });
   const { mutateAsync: updateRow, isPending } = useUpdateRow(reportId);
 
-  const baseRowClass = `hover:bg-gray-50 ${row.manuallyCorrected ? "bg-yellow-50" : ""}`;
+  const outlierBg = outlier
+    ? outlier.deviation === "SEVERE"
+      ? "bg-red-50"
+      : outlier.deviation === "MODERATE"
+      ? "bg-orange-50"
+      : "bg-yellow-50"
+    : "";
+  const baseRowClass = `hover:bg-opacity-80 ${row.manuallyCorrected ? "bg-yellow-50" : outlierBg}`;
 
   const handleSave = async () => {
     try {
@@ -119,8 +128,16 @@ function RowEditor({ row, reportId, layout, canEdit }: RowEditorProps) {
   );
 
   const correctedBadge = (
-    <td className="px-4 py-3">
-      {row.manuallyCorrected && <span className="text-xs text-yellow-600">✎ corrected</span>}
+    <td className="px-4 py-3 align-top">
+      {row.manuallyCorrected && <span className="text-xs text-yellow-600 block">✎ corrected</span>}
+      {outlier && (
+        <span className={`text-xs block mt-0.5 ${
+          outlier.deviation === "SEVERE" ? "text-red-600" :
+          outlier.deviation === "MODERATE" ? "text-orange-600" : "text-yellow-700"
+        }`}>
+          ⚠ {outlier.note}
+        </span>
+      )}
     </td>
   );
 
@@ -389,6 +406,11 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const isPublished = report.flagStatus === "AUTO_PUBLISHED" || !!report.publishedAt;
+
+  // Build a lowercase testName → outlier lookup for O(1) row highlighting
+  const outlierMap = new Map<string, AiOutlier>(
+    (report.outliers ?? []).map((o) => [o.testName.trim().toLowerCase(), o])
+  );
   const canConfirm = report.source === "LAB_PUSH_PDF" && report.processingStatus === "EXTRACTED";
   const canPublish =
     !isPublished &&
@@ -498,6 +520,53 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
         </div>
       )}
 
+      {/* AI summary card */}
+      {report.llmSummary && report.severityHint && (
+        <div className={`rounded-xl border px-5 py-4 space-y-1 ${
+          report.severityHint === "CRITICAL" ? "bg-red-50 border-red-200" :
+          report.severityHint === "MODERATE" ? "bg-orange-50 border-orange-200" :
+          report.severityHint === "MILD"     ? "bg-yellow-50 border-yellow-200" :
+                                               "bg-green-50 border-green-200"
+        }`}>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+              report.severityHint === "CRITICAL" ? "bg-red-100 text-red-700" :
+              report.severityHint === "MODERATE" ? "bg-orange-100 text-orange-700" :
+              report.severityHint === "MILD"     ? "bg-yellow-100 text-yellow-700" :
+                                                   "bg-green-100 text-green-700"
+            }`}>
+              AI · {report.severityHint}
+            </span>
+            <span className="text-xs text-gray-500">Quality screening summary</span>
+          </div>
+          <p className={`text-sm ${
+            report.severityHint === "CRITICAL" ? "text-red-800" :
+            report.severityHint === "MODERATE" ? "text-orange-800" :
+            report.severityHint === "MILD"     ? "text-yellow-800" :
+                                                 "text-green-800"
+          }`}>
+            {report.llmSummary}
+          </p>
+        </div>
+      )}
+
+      {/* Data quality warnings */}
+      {(report.dataQualityWarnings?.length ?? 0) > 0 && (
+        <div className="rounded-xl border border-gray-300 bg-gray-50 px-5 py-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+            Data Quality Issues ({report.dataQualityWarnings!.length})
+          </p>
+          <ul className="space-y-1">
+            {report.dataQualityWarnings!.map((w, i) => (
+              <li key={i} className="flex gap-2 text-sm text-gray-700">
+                <span className="text-gray-400 shrink-0">•</span>
+                <span><span className="font-medium">{w.testName}:</span> {w.issue}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Results table */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
@@ -550,7 +619,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {report.results.map((row) => (
-                    <RowEditor key={row.id} row={row} reportId={reportId} layout={layout} canEdit={canEdit} />
+                    <RowEditor key={row.id} row={row} reportId={reportId} layout={layout} canEdit={canEdit} outlierMap={outlierMap} />
                   ))}
                 </tbody>
               </table>

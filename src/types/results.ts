@@ -78,6 +78,18 @@ export interface LabResultRowDto {
   sortOrder?: number;
 }
 
+export interface AiOutlier {
+  testName: string;
+  /** MILD | MODERATE | SEVERE */
+  deviation: string;
+  note: string;
+}
+
+export interface DataQualityWarning {
+  testName: string;
+  issue: string;
+}
+
 export interface LabReportDetailDto {
   reportId: string;
   source: string;
@@ -87,6 +99,14 @@ export interface LabReportDetailDto {
   flagStatus?: FlagStatus;
   /** Set once published to the patient */
   publishedAt?: string;
+  /** AI 1-2 sentence summary — null if QA hasn't run yet */
+  llmSummary?: string;
+  /** NORMAL | MILD | MODERATE | CRITICAL */
+  severityHint?: string;
+  /** Per-row AI findings for tests outside reference range */
+  outliers?: AiOutlier[];
+  /** Rule-based data quality issues detected before AI ran */
+  dataQualityWarnings?: DataQualityWarning[];
   ocrConfidence?: number;
   reportDate?: string;
   labReportRef?: string;
