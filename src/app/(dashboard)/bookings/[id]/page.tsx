@@ -15,6 +15,7 @@ import {
   useMarkWaived,
 } from "@/hooks/useBookings";
 import type { BookingStatus, PaymentMethod } from "@/types/bookings";
+import { useTestMenu } from "@/hooks/useProfile";
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
   PENDING: "bg-yellow-100 text-yellow-800",
@@ -78,10 +79,19 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
   const { mutateAsync: noShow, isPending: isNoShow } = useNoShowBooking(id);
   const { mutateAsync: markPaid, isPending: isMarkingPaid } = useMarkPaid(id);
   const { mutateAsync: markWaived, isPending: isMarkingWaived } = useMarkWaived(id);
+  const { data: testMenu } = useTestMenu();
 
   const [showPayForm, setShowPayForm] = useState(false);
   const [payMethod, setPayMethod] = useState<PaymentMethod>("CASH");
   const [payAmount, setPayAmount] = useState("");
+
+  const openPayForm = () => {
+    const match = testMenu?.find((t) =>
+      booking?.testMenuItemId ? t.id === booking.testMenuItemId : t.testName === booking?.testName
+    );
+    if (match?.priceKobo) setPayAmount((match.priceKobo / 100).toString());
+    setShowPayForm(true);
+  };
 
   const act = (label: string, fn: () => Promise<unknown>) => async () => {
     try {
@@ -258,7 +268,7 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             {!showPayForm ? (
               <div className="flex gap-2">
                 <button
-                  onClick={() => setShowPayForm(true)}
+                  onClick={openPayForm}
                   className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
                 >
                   Mark as Paid
