@@ -2,9 +2,11 @@ export type LabTier = "FREE" | "BASIC" | "PREMIUM_B2B";
 
 export type LabStatus =
   | "PENDING_VERIFICATION"
-  | "APPROVED"
+  | "PENDING_APPROVAL"
+  | "ACTIVE"
   | "SUSPENDED"
-  | "REJECTED";
+  | "REJECTED"
+  | "DELETED";
 
 export interface LabAccount {
   labId: string;
@@ -20,7 +22,14 @@ export interface LabAccount {
 export interface LabAuthResponse {
   accessToken: string;
   refreshToken: string;
-  lab: LabAccount;
+  expiresIn: number;
+  labId: string;
+  labName: string;
+  tier: LabTier;
+  inTrial: boolean;
+  status: LabStatus;
+  email?: string;
+  trialEndDate?: string | null;
 }
 
 export interface LabRefreshResponse {
@@ -38,6 +47,7 @@ export interface LabAuthState {
   inTrial: boolean;
   trialEndDate: string | null;
   isAuthenticated: boolean;
+  sessionExpired: boolean;
 
   setAuth: (payload: {
     accessToken: string;
@@ -50,6 +60,7 @@ export interface LabAuthState {
     trialEndDate: string | null;
   }) => void;
   setAccessToken: (token: string) => void;
+  setSessionExpired: (expired: boolean) => void;
   clearAuth: () => void;
 }
 
