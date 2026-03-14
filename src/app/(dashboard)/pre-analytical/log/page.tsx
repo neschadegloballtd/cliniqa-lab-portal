@@ -4,9 +4,30 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useLogPreAnalyticalError } from "@/hooks/usePreAnalytical";
 import { REJECTION_REASON_LABELS, type RejectionReason } from "@/types/pre-analytical";
+import { useTestMenu } from "@/hooks/useProfile";
+import type { TestCategory } from "@/types/profile";
+
+const CATEGORY_LABELS: Record<TestCategory, string> = {
+  HAEMATOLOGY: "Haematology",
+  MICROBIOLOGY: "Microbiology",
+  CHEMISTRY: "Chemistry",
+  SEROLOGY: "Serology",
+  URINALYSIS: "Urinalysis",
+  OTHER: "Other",
+};
+
+const CATEGORY_COLORS: Record<TestCategory, string> = {
+  HAEMATOLOGY: "bg-red-100 text-red-700",
+  MICROBIOLOGY: "bg-purple-100 text-purple-700",
+  CHEMISTRY: "bg-blue-100 text-blue-700",
+  SEROLOGY: "bg-teal-100 text-teal-700",
+  URINALYSIS: "bg-amber-100 text-amber-700",
+  OTHER: "bg-gray-100 text-gray-600",
+};
 
 const REJECTION_REASONS = Object.keys(REJECTION_REASON_LABELS) as RejectionReason[];
 
@@ -28,10 +49,14 @@ type FormData = z.infer<typeof schema>;
 export default function LogPreAnalyticalErrorPage() {
   const router = useRouter();
   const { mutateAsync: logError, isPending } = useLogPreAnalyticalError();
+  const { data: testMenu } = useTestMenu();
+  const activeTests = testMenu?.filter((t) => t.isActive) ?? [];
+  const [selectedCategory, setSelectedCategory] = useState<TestCategory | null>(null);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
@@ -96,12 +121,43 @@ export default function LogPreAnalyticalErrorPage() {
             <label className="block text-sm font-medium text-gray-700">
               Test Name <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
-              placeholder="e.g. Full Blood Count"
-              {...register("testName")}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+            {activeTests.length > 0 ? (
+              <select
+                {...register("testName")}
+                onChange={(e) => {
+                  setValue("testName", e.target.value);
+                  const selected = activeTests.find((t) => t.testName === e.target.value);
+                  if (selected) {
+                    setValue("sampleType", selected.sampleType);
+                    setSelectedCategory(selected.testCategory);
+                  } else {
+                    setSelectedCategory(null);
+                  }
+                }}
+                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+              >
+                <option value="">— Select test —</option>
+                {activeTests.map((t) => (
+                  <option key={t.id} value={t.testName}>
+                    {t.testName}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                placeholder="e.g. Full Blood Count"
+                {...register("testName")}
+                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            )}
+            {selectedCategory && (
+              <span
+                className={`mt-1.5 inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${CATEGORY_COLORS[selectedCategory]}`}
+              >
+                {CATEGORY_LABELS[selectedCategory]}
+              </span>
+            )}
             {errors.testName && (
               <p className="mt-1 text-xs text-red-600">{errors.testName.message}</p>
             )}
@@ -114,8 +170,16 @@ export default function LogPreAnalyticalErrorPage() {
               type="text"
               placeholder="e.g. EDTA Blood, Urine, Serum"
               {...register("sampleType")}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              readOnly={activeTests.length > 0 && !!selectedCategory}
+              className={`mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                activeTests.length > 0 && !!selectedCategory
+                  ? "bg-gray-50 text-gray-500 cursor-default"
+                  : ""
+              }`}
             />
+            {activeTests.length > 0 && !!selectedCategory && (
+              <p className="mt-1 text-xs text-gray-400">Auto-filled from selected test</p>
+            )}
             {errors.sampleType && (
               <p className="mt-1 text-xs text-red-600">{errors.sampleType.message}</p>
             )}
