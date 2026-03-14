@@ -127,10 +127,10 @@ function RowEditor({ row, reportId, layout }: RowEditorProps) {
     if (!editing) {
       return (
         <tr className={baseRowClass}>
-          <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.testName}</td>
-          <td className="px-4 py-3 text-sm text-gray-500">{fmt(row.testCategory)}</td>
-          <td className="px-4 py-3 text-sm text-gray-900">{row.measuredValue || "—"}</td>
-          <td className="px-4 py-3 text-sm">
+          <td className="px-4 py-3 text-sm font-medium text-gray-900 align-top">{row.testName}</td>
+          <td className="px-4 py-3 text-sm text-gray-500 align-top">{fmt(row.testCategory)}</td>
+          <td className="px-4 py-3 text-sm text-gray-900 align-top break-words whitespace-normal">{row.measuredValue || "—"}</td>
+          <td className="px-4 py-3 text-sm align-top">
             {row.status ? (
               <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                 /sensitive/i.test(row.status) ? "bg-green-100 text-green-700" :
@@ -481,14 +481,28 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
           </div>
         ) : (() => {
             const layout = getLayout(report.reportType);
+
+            // Column headers per layout
             const headers: string[] =
               layout === "microbiology"
                 ? ["Test / Antibiotic", "Category", "Result", "Sensitivity", "Notes", ""]
                 : layout === "imaging"
                 ? ["Finding", "Description / Impression", "Notes", ""]
                 : ["Test Name", "Category", "Value", "Unit", "Reference Range", "Status", "Notes", ""];
+
+            // Fixed column widths per layout (colgroup) — prevents long text blowing out neighbours
+            const colWidths: string[] =
+              layout === "microbiology"
+                ? ["w-[22%]", "w-[14%]", "w-[34%]", "w-[16%]", "w-[8%]", "w-[6%]"]
+                : layout === "imaging"
+                ? ["w-[22%]", "w-[62%]", "w-[10%]", "w-[6%]"]
+                : ["w-[22%]", "w-[12%]", "w-[12%]", "w-[8%]", "w-[18%]", "w-[12%]", "w-[10%]", "w-[6%]"];
+
             return (
-              <table className="min-w-full divide-y divide-gray-100">
+              <table className="min-w-full table-fixed divide-y divide-gray-100">
+                <colgroup>
+                  {colWidths.map((w, i) => <col key={i} className={w} />)}
+                </colgroup>
                 <thead>
                   <tr className="bg-gray-50">
                     {headers.map((h, i) => (
