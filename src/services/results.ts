@@ -61,9 +61,17 @@ export const resultsService = {
     return api.get(`${BASE}/template.csv`, { responseType: "blob" }).then((r) => r.data);
   },
 
-  /** List all reports (paginated) */
-  listReports(page = 0, size = 20): Promise<ApiResponse<PagedResponse<LabReportSummaryDto>>> {
-    return api.get(BASE, { params: { page, size } }).then((r) => r.data);
+  /** List reports — all params are optional filters */
+  listReports(
+    page = 0,
+    size = 20,
+    search?: string,
+    flagStatus?: string,
+    processingStatus?: string
+  ): Promise<ApiResponse<PagedResponse<LabReportSummaryDto>>> {
+    return api
+      .get(BASE, { params: { page, size, search: search || undefined, flagStatus: flagStatus || undefined, processingStatus: processingStatus || undefined } })
+      .then((r) => r.data);
   },
 
   /** Get report detail with extracted rows */
