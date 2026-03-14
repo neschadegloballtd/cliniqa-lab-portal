@@ -6,13 +6,15 @@ export type ProcessingStatus =
   | "FAILED"
   | "SAVED"
   | "PUBLISHED"
-  | "PATIENT_NOT_FOUND";
+  | "PATIENT_NOT_FOUND"
+  | "PENDING_CLAIM";
 
 export type FlagStatus =
   | "PENDING_REVIEW"
   | "REVIEWED_NORMAL"
   | "REVIEWED_CRITICAL"
-  | "OVERRIDDEN";
+  | "OVERRIDDEN"
+  | "AUTO_PUBLISHED";
 
 export interface LabResultItemRequest {
   testName: string;
@@ -91,6 +93,7 @@ export interface LabReportSummaryDto {
   labReportRef?: string;
   reportDate?: string;
   resultCount: number;
+  processingStatus: ProcessingStatus;
   flagStatus?: FlagStatus;
   severityHint?: string;
   createdAt: string;

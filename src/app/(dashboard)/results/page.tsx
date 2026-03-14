@@ -4,7 +4,36 @@ import { useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useReports } from "@/hooks/useResults";
-import type { FlagStatus } from "@/types/results";
+import type { FlagStatus, ProcessingStatus } from "@/types/results";
+
+function StatusBadge({ status }: { status: ProcessingStatus }) {
+  if (status === "PENDING_CLAIM") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
+        Awaiting patient
+      </span>
+    );
+  }
+  if (status === "CONFIRMED") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+        Confirmed
+      </span>
+    );
+  }
+  if (status === "FAILED") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+        Failed
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+      {status}
+    </span>
+  );
+}
 
 function FlagBadge({ status }: { status?: FlagStatus }) {
   if (!status) return <span className="text-xs text-gray-400">—</span>;
@@ -13,6 +42,7 @@ function FlagBadge({ status }: { status?: FlagStatus }) {
     REVIEWED_NORMAL: { label: "Normal", className: "bg-green-100 text-green-800" },
     REVIEWED_CRITICAL: { label: "Critical", className: "bg-red-100 text-red-800" },
     OVERRIDDEN: { label: "Overridden", className: "bg-gray-100 text-gray-700" },
+    AUTO_PUBLISHED: { label: "Auto Published", className: "bg-blue-100 text-blue-700" },
   };
   const { label, className } = map[status];
   return (
@@ -50,7 +80,7 @@ export default function ResultsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr className="bg-gray-50">
-                  {["Ref", "Date", "Results", "Flag Status", "Severity", "Created", ""].map((h) => (
+                  {["Ref", "Date", "Results", "Status", "Flag Status", "Severity", "Created", ""].map((h) => (
                     <th
                       key={h}
                       className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
@@ -63,7 +93,7 @@ export default function ResultsPage() {
               <tbody className="divide-y divide-gray-100">
                 {data?.content.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
+                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
                       No reports yet. Push your first result.
                     </td>
                   </tr>
@@ -78,6 +108,9 @@ export default function ResultsPage() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                       {r.resultCount}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <StatusBadge status={r.processingStatus} />
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <FlagBadge status={r.flagStatus} />
@@ -105,19 +138,19 @@ export default function ResultsPage() {
             {data && data.totalPages > 1 && (
               <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
                 <p className="text-sm text-gray-600">
-                  Page {data.number + 1} of {data.totalPages}
+                  Page {data.page + 1} of {data.totalPages}
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPage((p) => Math.max(0, p - 1))}
-                    disabled={data.first}
+                    disabled={data.page === 0}
                     className="rounded border px-3 py-1 text-sm disabled:opacity-40"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => setPage((p) => p + 1)}
-                    disabled={data.last}
+                    disabled={data.page >= data.totalPages - 1}
                     className="rounded border px-3 py-1 text-sm disabled:opacity-40"
                   >
                     Next
