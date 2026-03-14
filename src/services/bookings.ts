@@ -53,4 +53,8 @@ export const bookingsService = {
   markWaived(id: string): Promise<ApiResponse<Booking>> {
     return api.patch(`${BASE}/${id}/mark-waived`).then((r) => r.data);
   },
+
+  searchByContact(phone?: string, email?: string): Promise<ApiResponse<Booking[]>> {
+    return api.get(`${BASE}/search`, { params: { phone, email } }).then((r) => r.data);
+  },
 };

@@ -41,13 +41,13 @@ export interface PreAnalyticalError {
 }
 
 export interface LogPreAnalyticalErrorRequest {
+  patientId?: string;
+  bookingId?: string;
   rejectionReason: RejectionReason;
-  patientPhone?: string;
-  patientEmail?: string;
-  sampleType: string;
-  testName: string;
+  sampleType?: string;
+  testName?: string;
   resampleBy?: string;
-  notes?: string;
+  rejectionNotes?: string;
 }
 
 export interface ResolvePreAnalyticalErrorRequest {

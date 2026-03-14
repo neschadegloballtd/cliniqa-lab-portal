@@ -85,3 +85,13 @@ export function useMarkPaid(id: string) {
 export function useMarkWaived(id: string) {
   return useBookingAction(bookingsService.markWaived, id);
 }
+
+export function useBookingsByContact(phone?: string, email?: string) {
+  return useQuery({
+    queryKey: ["bookings", "search", phone, email] as const,
+    queryFn: () => bookingsService.searchByContact(phone, email),
+    select: (data) => data.data,
+    enabled: !!(phone || email),
+    staleTime: 30_000,
+  });
+}
