@@ -45,22 +45,32 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-/** Converts a raw OCR status value to a readable label.
+/** Converts a raw OCR status/value to a readable label.
  *  e.g. HIGH_SENSITIVE → High Sensitive, NORMAL → Normal */
-function formatResultStatus(status: string | undefined): string {
-  if (!status) return "—";
-  return status
+function fmt(value: string | undefined | null): string {
+  if (!value) return "—";
+  return value
     .replace(/_/g, " ")
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+type TableLayout = "standard" | "microbiology" | "imaging";
+
+function getLayout(reportType?: string): TableLayout {
+  if (!reportType) return "standard";
+  if (reportType === "MICROBIOLOGY") return "microbiology";
+  if (reportType === "ULTRASOUND" || reportType === "RADIOLOGY") return "imaging";
+  return "standard";
+}
+
 interface RowEditorProps {
   row: LabResultRowDto;
   reportId: string;
+  layout: TableLayout;
 }
 
-function RowEditor({ row, reportId }: RowEditorProps) {
+function RowEditor({ row, reportId, layout }: RowEditorProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<LabResultRowUpdateRequest>({
     measuredValue: row.measuredValue,
@@ -69,6 +79,8 @@ function RowEditor({ row, reportId }: RowEditorProps) {
     status: row.status ?? "",
   });
   const { mutateAsync: updateRow, isPending } = useUpdateRow(reportId);
+
+  const baseRowClass = `hover:bg-gray-50 ${row.manuallyCorrected ? "bg-yellow-50" : ""}`;
 
   const handleSave = async () => {
     try {
@@ -80,36 +92,146 @@ function RowEditor({ row, reportId }: RowEditorProps) {
     }
   };
 
-  if (!editing) {
+  const editActions = (colSpan: number) => (
+    <td colSpan={colSpan} className="px-4 py-2 text-right">
+      <button
+        onClick={handleSave}
+        disabled={isPending}
+        className="mr-2 rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
+      >
+        {isPending ? "Saving…" : "Save"}
+      </button>
+      <button onClick={() => setEditing(false)} className="text-xs text-gray-500 hover:text-gray-700">
+        Cancel
+      </button>
+    </td>
+  );
+
+  const editButton = (
+    <td className="px-4 py-3 text-right text-sm">
+      <button onClick={() => setEditing(true)} className="text-blue-600 hover:underline text-xs">
+        Edit
+      </button>
+    </td>
+  );
+
+  const correctedBadge = (
+    <td className="px-4 py-3">
+      {row.manuallyCorrected && <span className="text-xs text-yellow-600">✎ corrected</span>}
+    </td>
+  );
+
+  // ── Microbiology layout ─────────────────────────────────────────────────
+  // Columns: Test / Antibiotic | Category | Result | Sensitivity
+  if (layout === "microbiology") {
+    if (!editing) {
+      return (
+        <tr className={baseRowClass}>
+          <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.testName}</td>
+          <td className="px-4 py-3 text-sm text-gray-500">{fmt(row.testCategory)}</td>
+          <td className="px-4 py-3 text-sm text-gray-900">{row.measuredValue || "—"}</td>
+          <td className="px-4 py-3 text-sm">
+            {row.status ? (
+              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                /sensitive/i.test(row.status) ? "bg-green-100 text-green-700" :
+                /resistant/i.test(row.status) ? "bg-red-100 text-red-700" :
+                /intermediate/i.test(row.status) ? "bg-yellow-100 text-yellow-700" :
+                "bg-gray-100 text-gray-600"
+              }`}>
+                {fmt(row.status)}
+              </span>
+            ) : "—"}
+          </td>
+          {correctedBadge}
+          {editButton}
+        </tr>
+      );
+    }
     return (
-      <tr className={`hover:bg-gray-50 ${row.manuallyCorrected ? "bg-yellow-50" : ""}`}>
-        <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.testName}</td>
-        <td className="px-4 py-3 text-sm text-gray-600">{row.testCategory ?? "—"}</td>
-        <td className="px-4 py-3 text-sm text-gray-900">{row.measuredValue}</td>
-        <td className="px-4 py-3 text-sm text-gray-600">{row.unit ?? "—"}</td>
-        <td className="px-4 py-3 text-sm text-gray-600">{row.referenceRangeText ?? "—"}</td>
-        <td className="px-4 py-3 text-sm text-gray-600">{formatResultStatus(row.status)}</td>
-        <td className="px-4 py-3">
-          {row.manuallyCorrected && (
-            <span className="text-xs text-yellow-600">✎ corrected</span>
-          )}
+      <tr className="bg-blue-50">
+        <td className="px-4 py-2 text-sm font-medium text-gray-900">{row.testName}</td>
+        <td className="px-4 py-2 text-sm text-gray-500">{fmt(row.testCategory)}</td>
+        <td className="px-4 py-2">
+          <input
+            value={draft.measuredValue ?? ""}
+            onChange={(e) => setDraft({ ...draft, measuredValue: e.target.value })}
+            className="w-32 rounded border border-blue-300 px-2 py-1 text-sm focus:outline-none"
+          />
         </td>
-        <td className="px-4 py-3 text-right text-sm">
-          <button
-            onClick={() => setEditing(true)}
-            className="text-blue-600 hover:underline text-xs"
+        <td className="px-4 py-2">
+          <select
+            value={draft.status ?? ""}
+            onChange={(e) => setDraft({ ...draft, status: e.target.value })}
+            className="rounded border border-blue-300 px-2 py-1 text-sm focus:outline-none"
           >
-            Edit
-          </button>
+            <option value="">—</option>
+            <option value="SENSITIVE">Sensitive</option>
+            <option value="RESISTANT">Resistant</option>
+            <option value="INTERMEDIATE">Intermediate</option>
+            <option value="POSITIVE">Positive</option>
+            <option value="NEGATIVE">Negative</option>
+            <option value="NORMAL">Normal</option>
+          </select>
         </td>
+        {editActions(2)}
       </tr>
     );
   }
 
+  // ── Imaging layout (Ultrasound / Radiology) ─────────────────────────────
+  // Columns: Finding | Description / Impression
+  if (layout === "imaging") {
+    if (!editing) {
+      return (
+        <tr className={baseRowClass}>
+          <td className="px-4 py-3 text-sm font-medium text-gray-900 w-48">{row.testName}</td>
+          <td className="px-4 py-3 text-sm text-gray-700 leading-relaxed">{row.measuredValue || "—"}</td>
+          {correctedBadge}
+          {editButton}
+        </tr>
+      );
+    }
+    return (
+      <tr className="bg-blue-50">
+        <td className="px-4 py-2 text-sm font-medium text-gray-900">{row.testName}</td>
+        <td className="px-4 py-2">
+          <textarea
+            value={draft.measuredValue ?? ""}
+            onChange={(e) => setDraft({ ...draft, measuredValue: e.target.value })}
+            rows={2}
+            className="w-full rounded border border-blue-300 px-2 py-1 text-sm focus:outline-none"
+          />
+        </td>
+        {editActions(2)}
+      </tr>
+    );
+  }
+
+  // ── Standard layout (Haematology, Biochemistry, Urinalysis, etc.) ───────
+  // Columns: Test Name | Category | Value | Unit | Reference Range | Status
+  if (!editing) {
+    return (
+      <tr className={baseRowClass}>
+        <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.testName}</td>
+        <td className="px-4 py-3 text-sm text-gray-500">{fmt(row.testCategory)}</td>
+        <td className="px-4 py-3 text-sm text-gray-900">{row.measuredValue}</td>
+        <td className="px-4 py-3 text-sm text-gray-600">{row.unit || "—"}</td>
+        <td className="px-4 py-3 text-sm text-gray-600">
+          {row.referenceRangeText ||
+            (row.referenceRangeLow != null || row.referenceRangeHigh != null
+              ? `${row.referenceRangeLow ?? "?"} – ${row.referenceRangeHigh ?? "?"}`
+              : "—")}
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-600">{fmt(row.status)}</td>
+        {correctedBadge}
+        {editButton}
+      </tr>
+    );
+  }
   return (
     <tr className="bg-blue-50">
       <td className="px-4 py-2 text-sm font-medium text-gray-900">{row.testName}</td>
-      <td className="px-4 py-2 text-sm text-gray-500">{row.testCategory ?? "—"}</td>
+      <td className="px-4 py-2 text-sm text-gray-500">{fmt(row.testCategory)}</td>
       <td className="px-4 py-2">
         <input
           value={draft.measuredValue ?? ""}
@@ -137,28 +259,15 @@ function RowEditor({ row, reportId }: RowEditorProps) {
           onChange={(e) => setDraft({ ...draft, status: e.target.value })}
           className="rounded border border-blue-300 px-2 py-1 text-sm focus:outline-none"
         >
-          <option value="">Auto</option>
+          <option value="">—</option>
           <option value="NORMAL">Normal</option>
           <option value="HIGH">High</option>
           <option value="LOW">Low</option>
           <option value="CRITICAL">Critical</option>
+          <option value="ABNORMAL">Abnormal</option>
         </select>
       </td>
-      <td colSpan={2} className="px-4 py-2 text-right">
-        <button
-          onClick={handleSave}
-          disabled={isPending}
-          className="mr-2 rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50"
-        >
-          {isPending ? "Saving…" : "Save"}
-        </button>
-        <button
-          onClick={() => setEditing(false)}
-          className="text-xs text-gray-500 hover:text-gray-700"
-        >
-          Cancel
-        </button>
-      </td>
+      {editActions(2)}
     </tr>
   );
 }
@@ -370,29 +479,36 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
               ? "Waiting for OCR extraction…"
               : "No results extracted."}
           </div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead>
-              <tr className="bg-gray-50">
-                {["Test Name", "Category", "Value", "Unit", "Reference Range", "Status", "Notes", ""].map(
-                  (h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
-                    >
-                      {h}
-                    </th>
-                  )
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {report.results.map((row) => (
-                <RowEditor key={row.id} row={row} reportId={reportId} />
-              ))}
-            </tbody>
-          </table>
-        )}
+        ) : (() => {
+            const layout = getLayout(report.reportType);
+            const headers: string[] =
+              layout === "microbiology"
+                ? ["Test / Antibiotic", "Category", "Result", "Sensitivity", "Notes", ""]
+                : layout === "imaging"
+                ? ["Finding", "Description / Impression", "Notes", ""]
+                : ["Test Name", "Category", "Value", "Unit", "Reference Range", "Status", "Notes", ""];
+            return (
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead>
+                  <tr className="bg-gray-50">
+                    {headers.map((h, i) => (
+                      <th
+                        key={`${h}-${i}`}
+                        className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {report.results.map((row) => (
+                    <RowEditor key={row.id} row={row} reportId={reportId} layout={layout} />
+                  ))}
+                </tbody>
+              </table>
+            );
+          })()}
       </div>
     </div>
   );

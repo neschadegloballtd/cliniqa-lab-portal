@@ -81,6 +81,7 @@ export interface LabResultRowDto {
 export interface LabReportDetailDto {
   reportId: string;
   source: string;
+  reportType?: string;
   processingStatus: ProcessingStatus;
   ocrConfidence?: number;
   reportDate?: string;

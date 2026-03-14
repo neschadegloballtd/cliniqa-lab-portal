@@ -48,6 +48,11 @@ api.interceptors.response.use(
       _retry?: boolean;
     };
 
+    if (error.response?.status === 403) {
+      useLabAuthStore.getState().setSessionExpired(true);
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
