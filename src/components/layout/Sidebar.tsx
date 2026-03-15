@@ -14,6 +14,7 @@ import {
   Users,
   Building2,
   TestTube2,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLabAuthStore } from "@/store/lab-auth.store";
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/bookings", label: "Bookings", icon: CalendarDays, minTier: null, ownerAdminOnly: false },
   { href: "/samples", label: "Samples", icon: TestTube2, minTier: null, ownerAdminOnly: false },
   { href: "/pre-analytical", label: "Pre-Analytical", icon: AlertTriangle, minTier: null, ownerAdminOnly: false },
+  { href: "/qc", label: "QC Runs", icon: ClipboardCheck, minTier: null, ownerAdminOnly: false },
   { href: "/qa", label: "QA Dashboard", icon: BarChart2, minTier: "BASIC" as const, ownerAdminOnly: false },
   { href: "/staff", label: "Team", icon: Users, minTier: null, ownerAdminOnly: true },
   { href: "/profile/branches", label: "Branches", icon: Building2, minTier: null, ownerAdminOnly: false },
