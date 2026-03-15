@@ -52,7 +52,7 @@ export const profileService = {
 
   uploadVerificationDoc: (docType: string, file: File) => {
     const form = new FormData();
-    form.append("docType", docType);
+    form.append("metadata", new Blob([JSON.stringify({ docType })], { type: "application/json" }));
     form.append("file", file);
     return api.post<ApiResponse<VerificationDoc>>("/lab/v1/verification/documents", form, {
       headers: { "Content-Type": "multipart/form-data" },
