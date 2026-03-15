@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { useOperatingHours, useUpdateOperatingHours } from "@/hooks/useProfile";
 import type { OperatingHoursEntry } from "@/types/profile";
 
@@ -24,9 +26,6 @@ export default function OperatingHoursPage() {
     defaultValues: { hours: DEFAULT_HOURS },
   });
 
-  const { fields } = useFieldArray({ control: undefined as never, name: "hours" });
-  void fields; // used for rendering below via watch
-
   const hours = watch("hours");
 
   useEffect(() => {
@@ -40,6 +39,12 @@ export default function OperatingHoursPage() {
 
   return (
     <div className="space-y-6 max-w-lg">
+      <Link
+        href="/profile"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to Profile
+      </Link>
       <h1 className="text-2xl font-bold">Operating Hours</h1>
 
       <form
