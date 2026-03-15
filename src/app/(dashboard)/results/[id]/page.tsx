@@ -138,8 +138,9 @@ function RowEditor({ row, reportId, layout, canEdit, outlierMap }: RowEditorProp
       await updateRow({ resultId: row.id, data: draft });
       setEditing(false);
       toast.success("Row updated");
-    } catch {
-      toast.error("Failed to update row");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Failed to update row");
     }
   };
 
@@ -368,8 +369,9 @@ function OverrideDialog({ reportId, onClose }: OverrideDialogProps) {
       await overrideFlag({ reportId, data: { reviewerNotes: notes, decision } });
       toast.success("Flag decision saved");
       onClose();
-    } catch {
-      toast.error("Failed to save flag decision");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Failed to save flag decision");
     }
   };
 
@@ -441,8 +443,9 @@ function AuthorizeDialog({ reportId, mode, onClose }: AuthorizeDialogProps) {
         toast.success("Authorization revoked");
       }
       onClose();
-    } catch {
-      toast.error(mode === "authorize" ? "Failed to authorize result" : "Failed to revoke authorization");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? (mode === "authorize" ? "Failed to authorize result" : "Failed to revoke authorization"));
     }
   };
 
@@ -560,8 +563,9 @@ function AcknowledgeAlertDialog({ reportId, alert, onClose }: AcknowledgeAlertDi
       });
       toast.success(`Critical alert for "${alert.testName}" acknowledged`);
       onClose();
-    } catch {
-      toast.error("Failed to acknowledge alert");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Failed to acknowledge alert");
     }
   };
 
@@ -628,8 +632,9 @@ function CriticalAlertsPanel({ reportId }: { reportId: string }) {
     try {
       await rescan();
       toast.success("Critical value detection re-run. Alerts refreshed.");
-    } catch {
-      toast.error("Re-scan failed.");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Re-scan failed.");
     }
   };
 
@@ -750,8 +755,9 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     try {
       await confirmPush();
       toast.success("Report confirmed — AI flagging in progress");
-    } catch {
-      toast.error("Failed to confirm report");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Failed to confirm report");
     }
   };
 
@@ -759,8 +765,9 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     try {
       await publishReport(reportId);
       toast.success("Report published — patient can now view results");
-    } catch {
-      toast.error("Failed to publish report");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Failed to publish report");
     }
   };
 
