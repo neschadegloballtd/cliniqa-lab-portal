@@ -11,8 +11,12 @@ import {
   useConfirmPush,
   usePublishReport,
   useOverrideFlag,
+  useAuthorizeResult,
+  useRevokeAuthorization,
+  useAuthorizationLog,
 } from "@/hooks/useResults";
-import type { AiOutlier, LabResultRowDto, LabResultRowUpdateRequest } from "@/types/results";
+import { useLabAuthStore } from "@/store/lab-auth.store";
+import type { AiOutlier, AuthorizationLogEntry, LabResultRowDto, LabResultRowUpdateRequest } from "@/types/results";
 
 function SourceBadge({ source }: { source: string }) {
   const map: Record<string, string> = {
@@ -411,10 +415,135 @@ function OverrideDialog({ reportId, onClose }: OverrideDialogProps) {
   );
 }
 
+interface AuthorizeDialogProps {
+  reportId: string;
+  mode: "authorize" | "revoke";
+  onClose: () => void;
+}
+
+function AuthorizeDialog({ reportId, mode, onClose }: AuthorizeDialogProps) {
+  const [notes, setNotes] = useState("");
+  const { mutateAsync: authorizeResult, isPending: isAuthorizing } = useAuthorizeResult(reportId);
+  const { mutateAsync: revokeAuthorization, isPending: isRevoking } = useRevokeAuthorization(reportId);
+  const isPending = isAuthorizing || isRevoking;
+
+  const handleSubmit = async () => {
+    try {
+      if (mode === "authorize") {
+        await authorizeResult(notes.trim() || undefined);
+        toast.success("Result authorized successfully");
+      } else {
+        await revokeAuthorization(notes.trim() || undefined);
+        toast.success("Authorization revoked");
+      }
+      onClose();
+    } catch {
+      toast.error(mode === "authorize" ? "Failed to authorize result" : "Failed to revoke authorization");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl space-y-4">
+        <h3 className="text-base font-semibold text-gray-900">
+          {mode === "authorize" ? "Authorize Result" : "Revoke Authorization"}
+        </h3>
+        <p className="text-sm text-gray-600">
+          {mode === "authorize"
+            ? "Authorizing confirms this result has been clinically reviewed and signed off. This action is logged."
+            : "Revoking authorization resets the result to preliminary status. This action is logged."}
+        </p>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Notes <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder={mode === "authorize" ? "e.g. Reviewed and verified by Dr. Smith" : "e.g. Value corrected — re-authorization required"}
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isPending}
+            className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
+              mode === "authorize"
+                ? "bg-emerald-600 hover:bg-emerald-700"
+                : "bg-red-600 hover:bg-red-700"
+            }`}
+          >
+            {isPending
+              ? mode === "authorize" ? "Authorizing…" : "Revoking…"
+              : mode === "authorize" ? "Authorize" : "Revoke Authorization"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AuthorizationLogPanel({ reportId }: { reportId: string }) {
+  const { data: log, isLoading } = useAuthorizationLog(reportId);
+
+  if (isLoading) {
+    return <div className="p-4 text-sm text-gray-400">Loading audit trail…</div>;
+  }
+  if (!log || log.length === 0) {
+    return <div className="p-4 text-sm text-gray-400">No authorization events yet.</div>;
+  }
+
+  const actionLabel: Record<string, { label: string; color: string }> = {
+    SUBMITTED: { label: "Submitted", color: "text-blue-600" },
+    AUTHORIZED: { label: "Authorized", color: "text-emerald-600" },
+    REVOKED: { label: "Revoked", color: "text-red-600" },
+  };
+
+  return (
+    <ol className="relative border-l border-gray-200 space-y-4 pl-6 py-2">
+      {log.map((entry: AuthorizationLogEntry) => {
+        const meta = actionLabel[entry.action] ?? { label: entry.action, color: "text-gray-700" };
+        return (
+          <li key={entry.id} className="relative">
+            <div className="absolute -left-[1.45rem] top-1 w-3 h-3 rounded-full bg-white border-2 border-gray-300" />
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-semibold ${meta.color}`}>{meta.label}</span>
+              <span className="text-xs text-gray-400">
+                {format(new Date(entry.occurredAt), "dd MMM yyyy, HH:mm")}
+              </span>
+            </div>
+            {entry.performedByStaffId && (
+              <p className="text-xs text-gray-500 mt-0.5">Staff ID: {entry.performedByStaffId}</p>
+            )}
+            {entry.notes && (
+              <p className="text-xs text-gray-600 mt-0.5 italic">&ldquo;{entry.notes}&rdquo;</p>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 export default function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: reportId } = use(params);
   const router = useRouter();
   const [showOverrideDialog, setShowOverrideDialog] = useState(false);
+  const [authDialog, setAuthDialog] = useState<"authorize" | "revoke" | null>(null);
+
+  const staffRole = useLabAuthStore((s) => s.staffRole);
+  // Lab owner (staffRole === null) + MANAGER/ADMIN/OWNER can authorize
+  const canAuthorize = staffRole === null || ["OWNER", "ADMIN", "MANAGER"].includes(staffRole);
+  // Only ADMIN/OWNER (and lab owner) can revoke
+  const canRevoke = staffRole === null || ["OWNER", "ADMIN"].includes(staffRole);
 
   const { data: report, isLoading, isError } = useReport(reportId);
 
@@ -455,6 +584,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const isPublished = report.flagStatus === "AUTO_PUBLISHED" || !!report.publishedAt;
+  const isAuthorized = report.authorizationStatus === "AUTHORIZED";
 
   // Build a lowercase testName → outlier lookup for O(1) row highlighting
   const outlierMap = new Map<string, AiOutlier>(
@@ -474,6 +604,13 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
       {showOverrideDialog && (
         <OverrideDialog reportId={reportId} onClose={() => setShowOverrideDialog(false)} />
       )}
+      {authDialog && (
+        <AuthorizeDialog
+          reportId={reportId}
+          mode={authDialog}
+          onClose={() => setAuthDialog(null)}
+        />
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between">
@@ -490,6 +627,16 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
           <div className="mt-1 flex items-center gap-2">
             <SourceBadge source={report.source} />
             <StatusBadge status={report.processingStatus} />
+            {/* Authorization status badge */}
+            {isAuthorized ? (
+              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                ✓ Authorized
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                Preliminary
+              </span>
+            )}
             {ocrStatus?.ocrConfidence !== undefined && (
               <span className="text-xs text-gray-400">
                 OCR confidence: {(ocrStatus.ocrConfidence * 100).toFixed(0)}%
@@ -501,10 +648,15 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
               Report date: {format(new Date(report.reportDate), "dd MMM yyyy")}
             </p>
           )}
+          {isAuthorized && report.authorizedAt && (
+            <p className="mt-0.5 text-xs text-gray-400">
+              Authorized {format(new Date(report.authorizedAt), "dd MMM yyyy, HH:mm")}
+            </p>
+          )}
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {canConfirm && (
             <button
               onClick={handleConfirm}
@@ -530,6 +682,23 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                 Override Flag
               </button>
             </>
+          )}
+          {/* Authorization actions */}
+          {!isAuthorized && canAuthorize && (
+            <button
+              onClick={() => setAuthDialog("authorize")}
+              className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+            >
+              Authorize
+            </button>
+          )}
+          {isAuthorized && canRevoke && (
+            <button
+              onClick={() => setAuthDialog("revoke")}
+              className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              Revoke Authorization
+            </button>
           )}
         </div>
       </div>
@@ -740,6 +909,21 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
               </table>
             );
           })()}
+      </div>
+
+      {/* Authorization audit trail */}
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-700">Authorization Audit Trail</h2>
+          {isAuthorized && (
+            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+              ✓ Authorized
+            </span>
+          )}
+        </div>
+        <div className="px-5 py-4">
+          <AuthorizationLogPanel reportId={reportId} />
+        </div>
       </div>
     </div>
   );
