@@ -2,22 +2,24 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { dashboardService } from "@/services/dashboard";
-
-export const DASHBOARD_OVERVIEW_KEY = ["dashboard-overview"] as const;
-export const DASHBOARD_ACTIVITY_KEY = ["dashboard-activity"] as const;
+import { useBranchStore } from "@/store/branch.store";
 
 export function useDashboardOverview() {
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
   return useQuery({
-    queryKey: DASHBOARD_OVERVIEW_KEY,
-    queryFn: () => dashboardService.getOverview().then((r) => r.data.data!),
+    queryKey: ["dashboard-overview", activeBranchId] as const,
+    queryFn: () => dashboardService.getOverview(activeBranchId ?? undefined),
+    select: (data) => data.data,
     refetchInterval: 60_000,
   });
 }
 
 export function useRecentActivity() {
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
   return useQuery({
-    queryKey: DASHBOARD_ACTIVITY_KEY,
-    queryFn: () => dashboardService.getRecentActivity().then((r) => r.data.data!),
+    queryKey: ["dashboard-activity", activeBranchId] as const,
+    queryFn: () => dashboardService.getRecentActivity(activeBranchId ?? undefined),
+    select: (data) => data.data,
     refetchInterval: 60_000,
   });
 }

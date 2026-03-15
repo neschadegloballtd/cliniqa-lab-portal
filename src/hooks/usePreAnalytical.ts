@@ -5,10 +5,12 @@ import type {
   PreAnalyticalFilter,
   ResolvePreAnalyticalErrorRequest,
 } from "@/types/pre-analytical";
+import { useBranchStore } from "@/store/branch.store";
 
 const KEYS = {
   all: ["pre-analytical"] as const,
-  list: (filter?: string, page?: number) => ["pre-analytical", "list", filter, page] as const,
+  list: (branchId?: string | null, filter?: string, page?: number) =>
+    ["pre-analytical", "list", branchId, filter, page] as const,
   detail: (id: string) => ["pre-analytical", id] as const,
 };
 
@@ -17,9 +19,10 @@ export function usePreAnalyticalErrors(params?: {
   page?: number;
   size?: number;
 }) {
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
   return useQuery({
-    queryKey: KEYS.list(params?.filter, params?.page),
-    queryFn: () => preAnalyticalService.list(params),
+    queryKey: KEYS.list(activeBranchId, params?.filter, params?.page),
+    queryFn: () => preAnalyticalService.list({ ...params, branchId: activeBranchId ?? undefined }),
     select: (data) => data.data,
   });
 }
