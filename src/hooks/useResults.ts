@@ -14,6 +14,8 @@ const KEYS = {
   pushStatus: (jobId: string) => ["push-status", jobId] as const,
   authLog: (id: string) => ["reports", id, "auth-log"] as const,
   criticalAlerts: (id: string) => ["reports", id, "critical-alerts"] as const,
+  pendingAlerts: ["critical-alerts", "pending"] as const,
+  qcTodayStatus: ["qc", "today-status"] as const,
 };
 
 export function useReports(
@@ -178,6 +180,39 @@ export function useAcknowledgeAlert(reportId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEYS.criticalAlerts(reportId) });
       qc.invalidateQueries({ queryKey: KEYS.report(reportId) });
+      qc.invalidateQueries({ queryKey: KEYS.pendingAlerts });
     },
+  });
+}
+
+/** All PENDING_CALLBACK alerts across all reports — drives the global banner. */
+export function useLabPendingAlerts() {
+  return useQuery({
+    queryKey: KEYS.pendingAlerts,
+    queryFn: () => resultsService.getPendingAlerts(),
+    select: (data) => data.data,
+    refetchInterval: 60_000, // refresh every minute
+  });
+}
+
+/** Re-scan a report's result rows for critical values from scratch. */
+export function useRescanAlerts(reportId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => resultsService.rescanAlerts(reportId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.criticalAlerts(reportId) });
+      qc.invalidateQueries({ queryKey: KEYS.pendingAlerts });
+    },
+  });
+}
+
+/** QC block status for today — drives the pre-flight publish indicator. */
+export function useQcTodayStatus() {
+  return useQuery({
+    queryKey: KEYS.qcTodayStatus,
+    queryFn: () => resultsService.getQcTodayStatus(),
+    select: (data) => data.data,
+    refetchInterval: 60_000,
   });
 }

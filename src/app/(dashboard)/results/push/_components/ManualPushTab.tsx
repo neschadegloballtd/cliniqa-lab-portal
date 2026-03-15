@@ -24,6 +24,7 @@ const schema = z
     patientEmail: z.string().email("Invalid email").optional().or(z.literal("")),
     reportDate: z.string().optional(),
     labReportRef: z.string().optional(),
+    instrumentName: z.string().optional(),
     results: z.array(resultItemSchema).min(1, "Add at least one result"),
   })
   .refine((d) => d.patientPhone || d.patientEmail, {
@@ -85,6 +86,7 @@ export default function ManualPushTab({ onSuccess }: Props) {
         patientEmail: data.patientEmail || undefined,
         reportDate: data.reportDate || undefined,
         labReportRef: data.labReportRef || undefined,
+        instrumentName: data.instrumentName || undefined,
         results: data.results,
       });
       if (res.data?.pushJobId) {
@@ -179,7 +181,7 @@ export default function ManualPushTab({ onSuccess }: Props) {
       </div>
 
       {/* Report metadata */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <label className="block text-sm font-medium text-gray-700">Report Date</label>
           <input
@@ -194,6 +196,17 @@ export default function ManualPushTab({ onSuccess }: Props) {
             type="text"
             placeholder="e.g. LAB-2024-001"
             {...register("labReportRef")}
+            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Analyser / Instrument <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. Mindray BS-240"
+            {...register("instrumentName")}
             className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none"
           />
         </div>

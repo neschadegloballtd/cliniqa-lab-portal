@@ -23,6 +23,13 @@ export interface QcViolationDto {
   id: string;
   rule: WestgardRule;
   severity: QcViolationSeverity;
+  isResolved: boolean;
+  resolvedAt?: string;
+  resolutionNotes?: string;
+}
+
+export interface ResolveQcViolationRequest {
+  resolutionNotes: string;
 }
 
 export interface QcRunResponse {

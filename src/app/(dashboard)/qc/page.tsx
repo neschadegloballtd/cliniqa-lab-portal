@@ -12,13 +12,14 @@ import {
   Tooltip,
   ReferenceLine,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
-import { useQcRuns, useLogQcRun } from "@/hooks/useQc";
+import { useQcRuns, useLogQcRun, useQcRunSeries, useResolveViolation } from "@/hooks/useQc";
 import type {
   LJDataPoint,
   QcRunResponse,
+  QcViolationDto,
   QcViolationSeverity,
+  ResolveQcViolationRequest,
   WestgardRule,
 } from "@/types/qc";
 import { WESTGARD_RULE_LABELS, WESTGARD_RULE_DESCRIPTIONS } from "@/types/qc";
@@ -51,11 +52,87 @@ function ZScoreBadge({ zScore }: { zScore: number }) {
   );
 }
 
+// ── Resolve Violation Dialog ──────────────────────────────────────────────────
+
+function ResolveViolationDialog({
+  violation,
+  onClose,
+}: {
+  violation: QcViolationDto;
+  onClose: () => void;
+}) {
+  const [notes, setNotes] = useState("");
+  const { mutateAsync: resolve, isPending } = useResolveViolation();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notes.trim()) {
+      toast.error("Resolution notes are required.");
+      return;
+    }
+    try {
+      await resolve({ violationId: violation.id, data: { resolutionNotes: notes.trim() } as ResolveQcViolationRequest });
+      toast.success("Violation resolved. Publishing is unblocked if no other unresolved REJECTs remain today.");
+      onClose();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Failed to resolve violation.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900">Resolve QC Violation</h3>
+          <p className="text-xs text-gray-500 mt-1">
+            Rule: <span className="font-medium">{WESTGARD_RULE_LABELS[violation.rule as WestgardRule] ?? violation.rule}</span>
+          </p>
+          <p className="text-xs text-gray-500">{WESTGARD_RULE_DESCRIPTIONS[violation.rule as WestgardRule]}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Corrective action taken <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={4}
+              required
+              placeholder="Describe what was done to fix the instrument issue…"
+              className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none resize-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isPending || !notes.trim()}
+              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            >
+              {isPending ? "Saving…" : "Mark Resolved"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── Levey-Jennings Chart ─────────────────────────────────────────────────────
 
 function buildLJData(runs: QcRunResponse[]): LJDataPoint[] {
-  // Show last 20 runs oldest-first for the chart
-  return [...runs].reverse().slice(0, 20).map((r) => ({
+  // runs arrive oldest-first from the series endpoint
+  return runs.map((r) => ({
     label:    format(new Date(r.runAt), "dd/MM HH:mm"),
     value:    Number(r.measuredValue),
     mean:     Number(r.targetMean),
@@ -118,7 +195,7 @@ function LeveyJenningsChart({ runs, analyte, unit }: {
         <ReferenceLine y={mean + 3 * sd}  stroke="#f87171" strokeDasharray="4 2" />
         <ReferenceLine y={mean - 3 * sd}  stroke="#f87171" strokeDasharray="4 2" label={{ value: "±3SD", fontSize: 9, fill: "#f87171", position: "right" }} />
 
-        {/* Control value line — dots turn red on violation */}
+        {/* Control value line — dots turn red/amber on violation */}
         <Line
           type="linear"
           dataKey="value"
@@ -188,8 +265,9 @@ function LogRunForm({ onSuccess }: { onSuccess: () => void }) {
       }
       setForm({ instrumentName: "", analyte: "", controlLevel: "NORMAL", measuredValue: "", targetMean: "", targetSd: "", runDate: today });
       onSuccess();
-    } catch {
-      toast.error("Failed to log QC run");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Failed to log QC run");
     }
   };
 
@@ -289,6 +367,54 @@ function LogRunForm({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
+// ── Chart Panel (separate component so series hook runs at correct level) ────
+
+function ChartPanel({
+  run,
+  onClose,
+}: {
+  run: QcRunResponse;
+  onClose: () => void;
+}) {
+  const { data: seriesRuns, isLoading } = useQcRunSeries(
+    run.instrumentName,
+    run.analyte,
+    run.controlLevel
+  );
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700">Levey-Jennings Chart</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {run.instrumentName} · {run.analyte} · {run.controlLevel}
+            {seriesRuns && <span className="ml-2 text-gray-400">({seriesRuns.length} runs)</span>}
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-xs text-gray-400 hover:text-gray-600"
+        >
+          Close chart
+        </button>
+      </div>
+      <div className="text-xs text-gray-400 flex gap-4 mb-2">
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-green-400"></span>±1 SD</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-amber-400"></span>±2 SD</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-red-400"></span>±3 SD</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 bg-red-500 rounded-full"></span>Reject</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 bg-amber-500 rounded-full"></span>Warning</span>
+      </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-48 text-sm text-gray-400">Loading series…</div>
+      ) : (
+        <LeveyJenningsChart runs={seriesRuns ?? []} analyte={run.analyte} />
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function QcPage() {
@@ -297,24 +423,23 @@ export default function QcPage() {
   const [instrumentFilter, setInstrumentFilter] = useState("");
   const [analyteFilter, setAnalyteFilter] = useState("");
   const [selectedRun, setSelectedRun] = useState<QcRunResponse | null>(null);
+  const [resolveTarget, setResolveTarget] = useState<QcViolationDto | null>(null);
 
   const { data, isLoading } = useQcRuns(page, 20, instrumentFilter, analyteFilter);
-  const runs    = data?.content ?? [];
-  const total   = data?.totalElements ?? 0;
-  const pages   = data?.totalPages ?? 1;
-
-  // For the L-J chart: filter to same instrument+analyte+level as selected run
-  const chartRuns = selectedRun
-    ? runs.filter(
-        (r) =>
-          r.instrumentName === selectedRun.instrumentName &&
-          r.analyte         === selectedRun.analyte &&
-          r.controlLevel    === selectedRun.controlLevel
-      )
-    : [];
+  const runs  = data?.content ?? [];
+  const total = data?.totalElements ?? 0;
+  const pages = data?.totalPages ?? 1;
 
   return (
     <div className="space-y-6">
+      {/* Resolve dialog */}
+      {resolveTarget && (
+        <ResolveViolationDialog
+          violation={resolveTarget}
+          onClose={() => setResolveTarget(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -339,34 +464,9 @@ export default function QcPage() {
         </div>
       )}
 
-      {/* Levey-Jennings chart (shown when a run is selected) */}
-      {selectedRun && chartRuns.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-700">
-                Levey-Jennings Chart
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {selectedRun.instrumentName} · {selectedRun.analyte} · {selectedRun.controlLevel}
-              </p>
-            </div>
-            <button
-              onClick={() => setSelectedRun(null)}
-              className="text-xs text-gray-400 hover:text-gray-600"
-            >
-              Close chart
-            </button>
-          </div>
-          <div className="text-xs text-gray-400 flex gap-4 mb-2">
-            <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-green-400"></span>±1 SD</span>
-            <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-amber-400"></span>±2 SD</span>
-            <span className="flex items-center gap-1"><span className="inline-block w-3 h-0.5 bg-red-400"></span>±3 SD</span>
-            <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 bg-red-500 rounded-full"></span>Reject</span>
-            <span className="flex items-center gap-1"><span className="inline-block w-3 h-1 bg-amber-500 rounded-full"></span>Warning</span>
-          </div>
-          <LeveyJenningsChart runs={chartRuns} analyte={selectedRun.analyte} />
-        </div>
+      {/* Levey-Jennings chart — uses dedicated series endpoint, not paginated data */}
+      {selectedRun && (
+        <ChartPanel run={selectedRun} onClose={() => setSelectedRun(null)} />
       )}
 
       {/* Filters */}
@@ -412,7 +512,12 @@ export default function QcPage() {
               {runs.map((run) => {
                 const hasReject  = run.violations.some((v) => v.severity === "REJECT");
                 const hasWarning = run.violations.some((v) => v.severity === "WARNING");
-                const rowBg      = hasReject ? "bg-red-50" : hasWarning ? "bg-amber-50" : "";
+                // Row colour fades if all REJECTs are resolved
+                const activeRejects = run.violations.filter((v) => v.severity === "REJECT" && !v.isResolved);
+                const rowBg = activeRejects.length > 0 ? "bg-red-50"
+                  : hasWarning ? "bg-amber-50"
+                  : hasReject ? "bg-gray-50"   // all REJECTs resolved
+                  : "";
                 const isSelected = selectedRun?.id === run.id;
                 return (
                   <tr key={run.id} className={`${rowBg} ${isSelected ? "ring-2 ring-inset ring-blue-400" : ""}`}>
@@ -443,6 +548,17 @@ export default function QcPage() {
                               >
                                 {WESTGARD_RULE_LABELS[v.rule as WestgardRule] ?? v.rule}
                               </span>
+                              {v.severity === "REJECT" && v.isResolved && (
+                                <span className="text-xs text-green-600 font-medium">✓ Resolved</span>
+                              )}
+                              {v.severity === "REJECT" && !v.isResolved && (
+                                <button
+                                  onClick={() => setResolveTarget(v)}
+                                  className="text-xs text-blue-600 hover:underline ml-1"
+                                >
+                                  Resolve
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
