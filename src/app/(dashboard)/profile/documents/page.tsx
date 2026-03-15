@@ -7,7 +7,7 @@ import { useVerificationDocs, useUploadVerificationDoc, useDeleteVerificationDoc
 import type { DocType, DocStatus } from "@/types/profile";
 
 const DOC_TYPES: { value: DocType; label: string }[] = [
-  { value: "CAC", label: "CAC Certificate" },
+  { value: "CAC_CERTIFICATE", label: "CAC Certificate" },
   { value: "MLSCN_LICENSE", label: "MLSCN License" },
   { value: "ACCREDITATION_CERT", label: "Accreditation Certificate" },
   { value: "TAX_CLEARANCE", label: "Tax Clearance" },
