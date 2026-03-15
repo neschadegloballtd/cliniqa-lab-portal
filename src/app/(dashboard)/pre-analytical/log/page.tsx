@@ -101,6 +101,16 @@ export default function LogPreAnalyticalErrorPage() {
     setValue("patientId", booking.patientId ?? "");
     setValue("testName", booking.testName);
 
+    // Always capture contact from the booking itself, not just what was typed
+    if (booking.pendingPatientPhone) {
+      setPhoneSearch(booking.pendingPatientPhone);
+      setValue("patientPhone", booking.pendingPatientPhone);
+    }
+    if (booking.pendingPatientEmail) {
+      setEmailSearch(booking.pendingPatientEmail);
+      setValue("patientEmail", booking.pendingPatientEmail);
+    }
+
     // Auto-fill sampleType from test menu if test name matches
     const menuItem = activeTests.find(
       (t) => t.testName.toLowerCase() === booking.testName.toLowerCase()
@@ -141,6 +151,8 @@ export default function LogPreAnalyticalErrorPage() {
       const res = await logError({
         patientId: data.patientId || undefined,
         bookingId: data.bookingId || undefined,
+        pendingPatientPhone: data.patientPhone || undefined,
+        pendingPatientEmail: data.patientEmail || undefined,
         rejectionReason: data.rejectionReason,
         sampleType: data.sampleType || undefined,
         testName: data.testName || undefined,

@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { Upload } from "lucide-react";
+import Link from "next/link";
+import { Upload, ArrowLeft } from "lucide-react";
 import { useProfile, useUploadLogo } from "@/hooks/useProfile";
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -39,6 +40,12 @@ export default function LogoPage() {
 
   return (
     <div className="space-y-6 max-w-md">
+      <Link
+        href="/profile"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to Profile
+      </Link>
       <h1 className="text-2xl font-bold">Lab Logo</h1>
 
       {(preview ?? profile?.logoUrl) && (

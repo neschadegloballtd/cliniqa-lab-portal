@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef } from "react";
-import { Trash2, UploadCloud, CheckCircle, XCircle, Clock } from "lucide-react";
+import Link from "next/link";
+import { Trash2, UploadCloud, CheckCircle, XCircle, Clock, ArrowLeft } from "lucide-react";
 import { useVerificationDocs, useUploadVerificationDoc, useDeleteVerificationDoc } from "@/hooks/useProfile";
 import type { DocType, DocStatus } from "@/types/profile";
 
@@ -44,6 +45,12 @@ export default function DocumentsPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
+      <Link
+        href="/profile"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to Profile
+      </Link>
       <h1 className="text-2xl font-bold">Verification Documents</h1>
       <p className="text-sm text-muted-foreground">
         Upload the required documents for account verification. All documents are reviewed by the Cliniqa team.

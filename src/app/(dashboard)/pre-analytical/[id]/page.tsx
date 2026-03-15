@@ -51,7 +51,8 @@ export default function PreAnalyticalDetailPage({
   if (isLoading) return <div className="p-8 text-center text-sm text-gray-500">Loading…</div>;
   if (isError || !error) return <div className="p-8 text-center text-sm text-red-600">Error not found.</div>;
 
-  const hasPatient = error.patientPhone || error.patientEmail;
+  const hasPatient = error.patientId || error.pendingPatientPhone || error.pendingPatientEmail;
+  const notifyChannel = error.patientId ? "push" : error.pendingPatientEmail ? "email" : error.pendingPatientPhone ? "sms" : null;
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -90,9 +91,10 @@ export default function PreAnalyticalDetailPage({
           {hasPatient && (
             <div>
               <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">Patient</dt>
-              <dd className="mt-0.5 text-sm text-gray-900">
-                {error.patientPhone && <span className="block">{error.patientPhone}</span>}
-                {error.patientEmail && <span className="block">{error.patientEmail}</span>}
+              <dd className="mt-0.5 text-sm text-gray-900 space-y-0.5">
+                {error.patientId && <span className="block text-gray-500 text-xs">Registered patient</span>}
+                {error.pendingPatientPhone && <span className="block">{error.pendingPatientPhone}</span>}
+                {error.pendingPatientEmail && <span className="block">{error.pendingPatientEmail}</span>}
               </dd>
             </div>
           )}
@@ -110,10 +112,10 @@ export default function PreAnalyticalDetailPage({
               {format(new Date(error.createdAt), "dd MMM yyyy, HH:mm")}
             </dd>
           </div>
-          {error.notes && (
+          {error.rejectionNotes && (
             <div className="col-span-full">
               <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">Notes</dt>
-              <dd className="mt-0.5 text-sm text-gray-900">{error.notes}</dd>
+              <dd className="mt-0.5 text-sm text-gray-900">{error.rejectionNotes}</dd>
             </div>
           )}
         </dl>
@@ -122,8 +124,8 @@ export default function PreAnalyticalDetailPage({
         {error.resolved && (
           <div className="rounded-lg bg-green-50 border border-green-200 p-4 space-y-1">
             <p className="text-xs font-medium text-green-700 uppercase tracking-wide">Resolution</p>
-            {error.resolutionNotes && (
-              <p className="text-sm text-green-900">{error.resolutionNotes}</p>
+            {error.rejectionNotes && (
+              <p className="text-sm text-green-900">{error.rejectionNotes}</p>
             )}
             {error.resolvedAt && (
               <p className="text-xs text-green-600">
@@ -137,9 +139,9 @@ export default function PreAnalyticalDetailPage({
         {error.patientNotified && (
           <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
             <p className="text-xs font-medium text-blue-700">
-              Patient notified
-              {error.patientNotifiedAt
-                ? ` on ${format(new Date(error.patientNotifiedAt), "dd MMM yyyy, HH:mm")}`
+              Patient notified via {notifyChannel === "push" ? "app notification" : notifyChannel === "email" ? "email" : "SMS"}
+              {error.notifiedAt
+                ? ` on ${format(new Date(error.notifiedAt), "dd MMM yyyy, HH:mm")}`
                 : ""}
             </p>
           </div>
@@ -204,9 +206,14 @@ export default function PreAnalyticalDetailPage({
                 ? "Patient Notified ✓"
                 : "Notify Patient"}
             </button>
-            {!error.patientNotified && (
+            {!error.patientNotified && notifyChannel && (
               <p className="text-xs text-gray-400">
-                Sends a resample request notification to the patient.
+                Sends via{" "}
+                {notifyChannel === "push"
+                  ? "app push notification"
+                  : notifyChannel === "email"
+                  ? `email (${error.pendingPatientEmail})`
+                  : `SMS (${error.pendingPatientPhone})`}
               </p>
             )}
           </div>
