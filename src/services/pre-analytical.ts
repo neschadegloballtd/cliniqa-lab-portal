@@ -11,15 +11,22 @@ const BASE = "/lab/v1/pre-analytical";
 
 export const preAnalyticalService = {
   list(params?: {
+    branchId?: string;
     filter?: PreAnalyticalFilter;
     page?: number;
     size?: number;
   }): Promise<ApiResponse<PagedResponse<PreAnalyticalError>>> {
-    const { filter, ...rest } = params ?? {};
+    const { filter, branchId, ...rest } = params ?? {};
     const resolved =
       filter === "RESOLVED" ? true : filter === "UNRESOLVED" ? false : undefined;
     return api
-      .get(BASE, { params: { ...rest, ...(resolved !== undefined ? { resolved } : {}) } })
+      .get(BASE, {
+        params: {
+          ...rest,
+          ...(branchId ? { branchId } : {}),
+          ...(resolved !== undefined ? { resolved } : {}),
+        },
+      })
       .then((r) => r.data);
   },
 

@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { bookingsService } from "@/services/bookings";
 import type { BookingStatus, CreateBookingRequest, MarkPaidRequest } from "@/types/bookings";
+import { useBranchStore } from "@/store/branch.store";
 
 const KEYS = {
   all: ["bookings"] as const,
-  list: (status?: string, dateFrom?: string, dateTo?: string, page?: number) =>
-    ["bookings", "list", status, dateFrom, dateTo, page] as const,
+  list: (branchId?: string | null, status?: string, dateFrom?: string, dateTo?: string, page?: number) =>
+    ["bookings", "list", branchId, status, dateFrom, dateTo, page] as const,
   detail: (id: string) => ["bookings", id] as const,
 };
 
@@ -16,9 +17,10 @@ export function useBookings(params?: {
   page?: number;
   size?: number;
 }) {
+  const activeBranchId = useBranchStore((s) => s.activeBranchId);
   return useQuery({
-    queryKey: KEYS.list(params?.status, params?.dateFrom, params?.dateTo, params?.page),
-    queryFn: () => bookingsService.list(params),
+    queryKey: KEYS.list(activeBranchId, params?.status, params?.dateFrom, params?.dateTo, params?.page),
+    queryFn: () => bookingsService.list({ ...params, branchId: activeBranchId ?? undefined }),
     select: (data) => data.data,
   });
 }

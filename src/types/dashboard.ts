@@ -1,12 +1,18 @@
 export interface DashboardOverview {
-  totalBookingsToday: number;
-  pendingFlagsCount: number;
-  unresolvedPreAnalyticalCount: number;
+  bookingsLast30Days: number;
+  unresolvedErrors: number;
+  totalResultsPushed: number;
+  totalBookings: number;
 }
 
-export interface ActivityItem {
+export interface DashboardActivityItem {
+  type: "BOOKING" | "PRE_ANALYTICAL_ERROR";
   id: string;
-  type: "BOOKING" | "RESULT" | "PRE_ANALYTICAL" | "SUBSCRIPTION";
-  description: string;
-  occurredAt: string;
+  title: string;
+  subtitle?: string;
+  createdAt: string;
+}
+
+export interface DashboardActivityResponse {
+  items: DashboardActivityItem[];
 }

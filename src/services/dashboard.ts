@@ -1,11 +1,17 @@
 import api from "@/lib/api";
 import type { ApiResponse } from "@/types/api";
-import type { DashboardOverview, ActivityItem } from "@/types/dashboard";
+import type { DashboardOverview, DashboardActivityResponse } from "@/types/dashboard";
 
 export const dashboardService = {
-  getOverview: () =>
-    api.get<ApiResponse<DashboardOverview>>("/lab/v1/dashboard/overview"),
+  getOverview(branchId?: string): Promise<ApiResponse<DashboardOverview>> {
+    return api
+      .get("/lab/v1/dashboard/overview", { params: branchId ? { branchId } : undefined })
+      .then((r) => r.data);
+  },
 
-  getRecentActivity: () =>
-    api.get<ApiResponse<ActivityItem[]>>("/lab/v1/dashboard/activity"),
+  getRecentActivity(branchId?: string): Promise<ApiResponse<DashboardActivityResponse>> {
+    return api
+      .get("/lab/v1/dashboard/activity", { params: branchId ? { branchId } : undefined })
+      .then((r) => r.data);
+  },
 };

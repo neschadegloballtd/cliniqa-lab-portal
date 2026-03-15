@@ -6,15 +6,22 @@ const BASE = "/lab/v1/bookings";
 
 export const bookingsService = {
   list(params?: {
+    branchId?: string;
     status?: BookingStatus | "ALL";
     dateFrom?: string;
     dateTo?: string;
     page?: number;
     size?: number;
   }): Promise<ApiResponse<PagedResponse<Booking>>> {
-    const { status, ...rest } = params ?? {};
+    const { status, branchId, ...rest } = params ?? {};
     return api
-      .get(BASE, { params: { ...rest, ...(status && status !== "ALL" ? { status } : {}) } })
+      .get(BASE, {
+        params: {
+          ...rest,
+          ...(branchId ? { branchId } : {}),
+          ...(status && status !== "ALL" ? { status } : {}),
+        },
+      })
       .then((r) => r.data);
   },
 
