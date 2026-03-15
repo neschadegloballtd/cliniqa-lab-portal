@@ -12,6 +12,7 @@ import {
   Settings,
   User,
   Users,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLabAuthStore } from "@/store/lab-auth.store";
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/pre-analytical", label: "Pre-Analytical", icon: AlertTriangle, minTier: null, ownerAdminOnly: false },
   { href: "/qa", label: "QA Dashboard", icon: BarChart2, minTier: "BASIC" as const, ownerAdminOnly: false },
   { href: "/staff", label: "Team", icon: Users, minTier: null, ownerAdminOnly: true },
+  { href: "/profile/branches", label: "Branches", icon: Building2, minTier: null, ownerAdminOnly: false },
   { href: "/subscription", label: "Subscription", icon: CreditCard, minTier: null, ownerAdminOnly: false },
   { href: "/profile", label: "Profile", icon: User, minTier: null, ownerAdminOnly: false },
   { href: "/settings", label: "Settings", icon: Settings, minTier: null, ownerAdminOnly: false },
