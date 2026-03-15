@@ -8,6 +8,8 @@ import type { SampleStatus } from "@/types/sample";
 import {
   SAMPLE_STATUS_LABELS,
   SAMPLE_STATUS_COLORS,
+  TAT_STATUS_LABELS,
+  TAT_STATUS_COLORS,
 } from "@/types/sample";
 import { useBranchStore } from "@/store/branch.store";
 import { formatDistanceToNow } from "date-fns";
@@ -84,25 +86,26 @@ export default function SamplesPage() {
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Patient</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">TAT</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground">Registered</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                   Loading…
                 </td>
               </tr>
             ) : samples.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                   No samples found.
                 </td>
               </tr>
             ) : (
               samples.map((sample) => (
-                <tr key={sample.id} className="hover:bg-muted/30 transition-colors">
+                <tr key={sample.id} className={`hover:bg-muted/30 transition-colors ${sample.tatStatus === "BREACHED" ? "bg-red-50" : sample.tatStatus === "AT_RISK" ? "bg-amber-50" : ""}`}>
                   <td className="px-4 py-3">
                     <Link
                       href={`/samples/${sample.id}`}
@@ -121,6 +124,15 @@ export default function SamplesPage() {
                     <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${SAMPLE_STATUS_COLORS[sample.status]}`}>
                       {SAMPLE_STATUS_LABELS[sample.status]}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {sample.tatStatus ? (
+                      <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${TAT_STATUS_COLORS[sample.tatStatus]}`}>
+                        {TAT_STATUS_LABELS[sample.tatStatus]}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">
                     {formatDistanceToNow(new Date(sample.createdAt), { addSuffix: true })}

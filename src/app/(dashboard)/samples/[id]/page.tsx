@@ -17,6 +17,8 @@ import {
   SAMPLE_STATUS_LABELS,
   SAMPLE_STATUS_COLORS,
   ALLOWED_NEXT_STATUSES,
+  TAT_STATUS_LABELS,
+  TAT_STATUS_COLORS,
 } from "@/types/sample";
 
 const LIFECYCLE: SampleStatus[] = [
@@ -106,6 +108,37 @@ export default function SampleDetailPage({
           <Detail label="Last updated" value={format(new Date(sample.updatedAt), "dd MMM yyyy, HH:mm")} />
           {sample.notes && <Detail label="Notes" value={sample.notes} className="col-span-2" />}
         </div>
+
+        {/* TAT panel — shown when a deadline is set */}
+        {sample.tatDeadlineAt && (
+          <div className={`rounded-md border px-4 py-3 flex items-center justify-between ${
+            sample.tatStatus === "BREACHED"
+              ? "border-red-200 bg-red-50"
+              : sample.tatStatus === "AT_RISK"
+              ? "border-amber-200 bg-amber-50"
+              : "border-green-200 bg-green-50"
+          }`}>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5">
+                Turnaround Time
+              </p>
+              <p className="text-sm text-gray-700">
+                Deadline: <span className="font-medium">{format(new Date(sample.tatDeadlineAt), "dd MMM yyyy, HH:mm")}</span>
+              </p>
+              {sample.tatStatus === "BREACHED" && (
+                <p className="text-xs text-red-600 mt-0.5">This sample is past its TAT deadline.</p>
+              )}
+              {sample.tatStatus === "AT_RISK" && (
+                <p className="text-xs text-amber-600 mt-0.5">Less than 2 hours remaining — take action.</p>
+              )}
+            </div>
+            {sample.tatStatus && (
+              <span className={`rounded px-2.5 py-1 text-xs font-semibold ${TAT_STATUS_COLORS[sample.tatStatus]}`}>
+                {TAT_STATUS_LABELS[sample.tatStatus]}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Status lifecycle bar */}

@@ -48,6 +48,20 @@ export interface SampleEvent {
   occurredAt: string;
 }
 
+export type TatStatus = "ON_TIME" | "AT_RISK" | "BREACHED";
+
+export const TAT_STATUS_LABELS: Record<TatStatus, string> = {
+  ON_TIME: "On Time",
+  AT_RISK: "At Risk",
+  BREACHED: "TAT Breached",
+};
+
+export const TAT_STATUS_COLORS: Record<TatStatus, string> = {
+  ON_TIME: "bg-green-100 text-green-700",
+  AT_RISK: "bg-amber-100 text-amber-700",
+  BREACHED: "bg-red-100 text-red-700",
+};
+
 export interface LabSample {
   id: string;
   labId: string;
@@ -63,6 +77,10 @@ export interface LabSample {
   collectedByStaffId?: string;
   receivedByStaffId?: string;
   notes?: string;
+  /** ISO timestamp — set when sample transitions to RECEIVED if test has turnaroundHours. */
+  tatDeadlineAt?: string;
+  /** Computed relative to now. Null if no deadline or sample is terminal. */
+  tatStatus?: TatStatus;
   events: SampleEvent[];
   createdAt: string;
   updatedAt: string;
