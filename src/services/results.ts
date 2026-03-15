@@ -1,5 +1,6 @@
 import api from "@/lib/api";
 import type {
+  AuthorizationLogEntry,
   FlagOverrideRequest,
   LabFilePushAcceptedResponse,
   LabOcrStatusResponse,
@@ -68,11 +69,12 @@ export const resultsService = {
     search?: string,
     flagStatus?: string,
     processingStatus?: string,
+    authorizationStatus?: string,
     dateFrom?: string,
     dateTo?: string,
   ): Promise<ApiResponse<PagedResponse<LabReportSummaryDto>>> {
     return api
-      .get(BASE, { params: { page, size, search: search || undefined, flagStatus: flagStatus || undefined, processingStatus: processingStatus || undefined, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined } })
+      .get(BASE, { params: { page, size, search: search || undefined, flagStatus: flagStatus || undefined, processingStatus: processingStatus || undefined, authorizationStatus: authorizationStatus || undefined, dateFrom: dateFrom || undefined, dateTo: dateTo || undefined } })
       .then((r) => r.data);
   },
 
@@ -103,6 +105,21 @@ export const resultsService = {
   /** Override AI flag decision */
   overrideFlag(reportId: string, data: FlagOverrideRequest): Promise<ApiResponse<void>> {
     return api.post(`${BASE}/${reportId}/flag-override`, data).then((r) => r.data);
+  },
+
+  /** Authorize a result — marks it as reviewed and signed off */
+  authorizeResult(reportId: string, notes?: string): Promise<ApiResponse<LabReportDetailDto>> {
+    return api.patch(`${BASE}/${reportId}/authorize`, { notes }).then((r) => r.data);
+  },
+
+  /** Revoke authorization — resets to PRELIMINARY */
+  revokeAuthorization(reportId: string, notes?: string): Promise<ApiResponse<LabReportDetailDto>> {
+    return api.patch(`${BASE}/${reportId}/revoke-authorization`, { notes }).then((r) => r.data);
+  },
+
+  /** Get full authorization audit trail */
+  getAuthorizationLog(reportId: string): Promise<ApiResponse<AuthorizationLogEntry[]>> {
+    return api.get(`${BASE}/${reportId}/authorization-log`).then((r) => r.data);
   },
 };
 

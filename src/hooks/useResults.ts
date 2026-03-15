@@ -11,6 +11,7 @@ const KEYS = {
   report: (id: string) => ["reports", id] as const,
   ocrStatus: (id: string) => ["reports", id, "ocr-status"] as const,
   pushStatus: (jobId: string) => ["push-status", jobId] as const,
+  authLog: (id: string) => ["reports", id, "auth-log"] as const,
 };
 
 export function useReports(
@@ -19,12 +20,13 @@ export function useReports(
   search?: string,
   flagStatus?: string,
   processingStatus?: string,
+  authorizationStatus?: string,
   dateFrom?: string,
   dateTo?: string,
 ) {
   return useQuery({
-    queryKey: [...KEYS.reports, page, size, search, flagStatus, processingStatus, dateFrom, dateTo],
-    queryFn: () => resultsService.listReports(page, size, search, flagStatus, processingStatus, dateFrom, dateTo),
+    queryKey: [...KEYS.reports, page, size, search, flagStatus, processingStatus, authorizationStatus, dateFrom, dateTo],
+    queryFn: () => resultsService.listReports(page, size, search, flagStatus, processingStatus, authorizationStatus, dateFrom, dateTo),
     select: (data) => data.data,
   });
 }
@@ -121,5 +123,38 @@ export function useOverrideFlag() {
     mutationFn: (vars: { reportId: string; data: FlagOverrideRequest }) =>
       resultsService.overrideFlag(vars.reportId, vars.data),
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: KEYS.report(vars.reportId) }),
+  });
+}
+
+export function useAuthorizeResult(reportId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (notes?: string) => resultsService.authorizeResult(reportId, notes),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.report(reportId) });
+      qc.invalidateQueries({ queryKey: KEYS.reports });
+      qc.invalidateQueries({ queryKey: KEYS.authLog(reportId) });
+    },
+  });
+}
+
+export function useRevokeAuthorization(reportId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (notes?: string) => resultsService.revokeAuthorization(reportId, notes),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.report(reportId) });
+      qc.invalidateQueries({ queryKey: KEYS.reports });
+      qc.invalidateQueries({ queryKey: KEYS.authLog(reportId) });
+    },
+  });
+}
+
+export function useAuthorizationLog(reportId: string) {
+  return useQuery({
+    queryKey: KEYS.authLog(reportId),
+    queryFn: () => resultsService.getAuthorizationLog(reportId),
+    select: (data) => data.data,
+    enabled: !!reportId,
   });
 }

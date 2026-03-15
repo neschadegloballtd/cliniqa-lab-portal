@@ -90,6 +90,17 @@ export interface DataQualityWarning {
   issue: string;
 }
 
+export type AuthorizationStatus = "PRELIMINARY" | "AUTHORIZED";
+
+export interface AuthorizationLogEntry {
+  id: string;
+  /** SUBMITTED | AUTHORIZED | REVOKED */
+  action: string;
+  performedByStaffId?: string;
+  notes?: string;
+  occurredAt: string;
+}
+
 export interface LabReportDetailDto {
   reportId: string;
   source: string;
@@ -111,6 +122,10 @@ export interface LabReportDetailDto {
   reportDate?: string;
   labReportRef?: string;
   results: LabResultRowDto[];
+  authorizationStatus: AuthorizationStatus;
+  authorizedByStaffId?: string;
+  authorizedAt?: string;
+  authorizationNotes?: string;
 }
 
 export interface LabReportSummaryDto {
@@ -121,6 +136,8 @@ export interface LabReportSummaryDto {
   processingStatus: ProcessingStatus;
   flagStatus?: FlagStatus;
   severityHint?: string;
+  authorizationStatus: AuthorizationStatus;
+  authorizedAt?: string;
   createdAt: string;
 }
 

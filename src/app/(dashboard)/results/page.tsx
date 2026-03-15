@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useReports } from "@/hooks/useResults";
-import type { FlagStatus, ProcessingStatus } from "@/types/results";
+import type { AuthorizationStatus, FlagStatus, ProcessingStatus } from "@/types/results";
 
 function StatusBadge({ status }: { status: ProcessingStatus }) {
   if (status === "PENDING_CLAIM") {
@@ -52,12 +52,28 @@ function FlagBadge({ status }: { status?: FlagStatus }) {
   );
 }
 
+function AuthBadge({ status }: { status: AuthorizationStatus }) {
+  if (status === "AUTHORIZED") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+        Authorized
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+      Preliminary
+    </span>
+  );
+}
+
 export default function ResultsPage() {
   const [page, setPage] = useState(0);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");          // debounced
   const [flagStatus, setFlagStatus] = useState("");
   const [processingStatus, setProcessingStatus] = useState("");
+  const [authorizationStatus, setAuthorizationStatus] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -71,10 +87,11 @@ export default function ResultsPage() {
   }, [searchInput]);
 
   // Reset page when any filter changes
-  const handleFlagStatus = (v: string) => { setFlagStatus(v); setPage(0); };
-  const handleProcStatus = (v: string) => { setProcessingStatus(v); setPage(0); };
-  const handleDateFrom   = (v: string) => { setDateFrom(v);   setPage(0); };
-  const handleDateTo     = (v: string) => { setDateTo(v);     setPage(0); };
+  const handleFlagStatus   = (v: string) => { setFlagStatus(v);          setPage(0); };
+  const handleProcStatus   = (v: string) => { setProcessingStatus(v);    setPage(0); };
+  const handleAuthStatus   = (v: string) => { setAuthorizationStatus(v); setPage(0); };
+  const handleDateFrom     = (v: string) => { setDateFrom(v);            setPage(0); };
+  const handleDateTo       = (v: string) => { setDateTo(v);              setPage(0); };
 
   const { data, isLoading, isError } = useReports(
     page,
@@ -82,11 +99,12 @@ export default function ResultsPage() {
     search || undefined,
     flagStatus || undefined,
     processingStatus || undefined,
+    authorizationStatus || undefined,
     dateFrom || undefined,
     dateTo || undefined,
   );
 
-  const hasFilters = !!search || !!flagStatus || !!processingStatus || !!dateFrom || !!dateTo;
+  const hasFilters = !!search || !!flagStatus || !!processingStatus || !!authorizationStatus || !!dateFrom || !!dateTo;
 
   return (
     <div className="space-y-6">
@@ -121,6 +139,17 @@ export default function ResultsPage() {
             </button>
           )}
         </div>
+
+        {/* Authorization status filter */}
+        <select
+          value={authorizationStatus}
+          onChange={(e) => handleAuthStatus(e.target.value)}
+          className="rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+        >
+          <option value="">All auth statuses</option>
+          <option value="PRELIMINARY">Preliminary</option>
+          <option value="AUTHORIZED">Authorized</option>
+        </select>
 
         {/* Flag status filter */}
         <select
@@ -173,7 +202,7 @@ export default function ResultsPage() {
 
         {hasFilters && (
           <button
-            onClick={() => { setSearchInput(""); setSearch(""); setFlagStatus(""); setProcessingStatus(""); setDateFrom(""); setDateTo(""); setPage(0); }}
+            onClick={() => { setSearchInput(""); setSearch(""); setFlagStatus(""); setProcessingStatus(""); setAuthorizationStatus(""); setDateFrom(""); setDateTo(""); setPage(0); }}
             className="text-sm text-blue-600 hover:underline whitespace-nowrap"
           >
             Clear filters
@@ -193,7 +222,7 @@ export default function ResultsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr className="bg-gray-50">
-                  {["Ref", "Date", "Results", "Status", "Flag Status", "Severity", "Created", ""].map((h) => (
+                  {["Ref", "Date", "Results", "Status", "Flag Status", "Authorization", "Severity", "Created", ""].map((h) => (
                     <th
                       key={h}
                       className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
@@ -206,7 +235,7 @@ export default function ResultsPage() {
               <tbody className="divide-y divide-gray-100">
                 {data?.content.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
+                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-500">
                       No reports yet. Push your first result.
                     </td>
                   </tr>
@@ -227,6 +256,9 @@ export default function ResultsPage() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <FlagBadge status={r.flagStatus} />
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <AuthBadge status={r.authorizationStatus} />
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">
                       {r.severityHint ?? "—"}
