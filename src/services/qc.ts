@@ -1,6 +1,6 @@
 import api from "@/lib/api";
 import type { ApiResponse, PagedResponse } from "@/types/api";
-import type { LogQcRunRequest, QcRunResponse } from "@/types/qc";
+import type { LogQcRunRequest, QcRunResponse, QcViolationDto, ResolveQcViolationRequest } from "@/types/qc";
 
 const BASE = "/lab/v1/qc";
 
@@ -22,5 +22,22 @@ export const qcService = {
 
   getRun(runId: string): Promise<ApiResponse<QcRunResponse>> {
     return api.get(`${BASE}/runs/${runId}`).then((r) => r.data);
+  },
+
+  getRunSeries(
+    instrument: string,
+    analyte: string,
+    level: string
+  ): Promise<ApiResponse<QcRunResponse[]>> {
+    return api
+      .get(`${BASE}/series`, { params: { instrument, analyte, level } })
+      .then((r) => r.data);
+  },
+
+  resolveViolation(
+    violationId: string,
+    data: ResolveQcViolationRequest
+  ): Promise<ApiResponse<QcViolationDto>> {
+    return api.patch(`${BASE}/violations/${violationId}/resolve`, data).then((r) => r.data);
   },
 };
