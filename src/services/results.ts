@@ -149,9 +149,11 @@ export const resultsService = {
     return api.post(`${BASE}/${reportId}/critical-alerts/rescan`).then(() => undefined);
   },
 
-  /** QC publish-block status for today — lets the UI show a pre-flight warning. */
-  getQcTodayStatus(): Promise<ApiResponse<QcTodayStatus>> {
-    return api.get("/lab/v1/qc/today-status").then((r) => r.data);
+  /** QC publish-block status for today — lets the UI show a pre-flight warning.
+   *  Pass instrumentName to scope the check to a specific analyser (matches publish logic). */
+  getQcTodayStatus(instrumentName?: string): Promise<ApiResponse<QcTodayStatus>> {
+    const params = instrumentName ? { instrumentName } : undefined;
+    return api.get("/lab/v1/qc/today-status", { params }).then((r) => r.data);
   },
 };
 

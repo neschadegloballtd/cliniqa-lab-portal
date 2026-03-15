@@ -15,7 +15,7 @@ const KEYS = {
   authLog: (id: string) => ["reports", id, "auth-log"] as const,
   criticalAlerts: (id: string) => ["reports", id, "critical-alerts"] as const,
   pendingAlerts: ["critical-alerts", "pending"] as const,
-  qcTodayStatus: ["qc", "today-status"] as const,
+  qcTodayStatus: (instrumentName?: string) => ["qc", "today-status", instrumentName ?? "all"] as const,
 };
 
 export function useReports(
@@ -207,11 +207,12 @@ export function useRescanAlerts(reportId: string) {
   });
 }
 
-/** QC block status for today — drives the pre-flight publish indicator. */
-export function useQcTodayStatus() {
+/** QC block status for today — drives the pre-flight publish indicator.
+ *  Pass instrumentName to scope to a specific analyser (mirrors publish logic). */
+export function useQcTodayStatus(instrumentName?: string) {
   return useQuery({
-    queryKey: KEYS.qcTodayStatus,
-    queryFn: () => resultsService.getQcTodayStatus(),
+    queryKey: KEYS.qcTodayStatus(instrumentName),
+    queryFn: () => resultsService.getQcTodayStatus(instrumentName),
     select: (data) => data.data,
     refetchInterval: 60_000,
   });

@@ -749,7 +749,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
 
   const { mutateAsync: confirmPush, isPending: isConfirming } = useConfirmPush(reportId);
   const { mutateAsync: publishReport, isPending: isPublishing } = usePublishReport();
-  const { data: qcStatus } = useQcTodayStatus();
+  const { data: qcStatus } = useQcTodayStatus(report?.instrumentName ?? undefined);
 
   const handleConfirm = async () => {
     try {
