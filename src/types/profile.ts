@@ -2,40 +2,55 @@ export interface LabProfile {
   labId: string;
   labName: string;
   email: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
+  phone: string | null;
+  addressStreet: string | null;
+  addressCity: string | null;
+  addressState: string | null;
+  addressLga: string | null;
   latitude: number | null;
   longitude: number | null;
   accreditationNumber: string | null;
   description: string | null;
-  website: string | null;
+  websiteUrl: string | null;
   logoUrl: string | null;
+  status: string;
+  tier: string;
+  inTrial: boolean;
+  trialEndDate: string | null;
 }
 
 export interface UpdateLabProfileRequest {
-  labName: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
+  labName?: string | null;
+  phone?: string | null;
+  addressStreet?: string | null;
+  addressCity?: string | null;
+  addressState?: string | null;
+  addressLga?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   accreditationNumber?: string | null;
   description?: string | null;
-  website?: string | null;
+  websiteUrl?: string | null;
 }
 
 // ── Test Menu ─────────────────────────────────────────────────────────────
 
+export type TestCategory =
+  | "HAEMATOLOGY"
+  | "MICROBIOLOGY"
+  | "CHEMISTRY"
+  | "SEROLOGY"
+  | "URINALYSIS"
+  | "OTHER";
+
 export interface TestMenuItem {
   id: string;
   testName: string;
-  testCategory: string;
+  testCategory: TestCategory;
   priceKobo: number;
   turnaroundHours: number;
   sampleType: string;
+  unit: string | null;
   isActive: boolean;
 }
 
@@ -45,6 +60,7 @@ export interface CreateTestMenuItemRequest {
   priceKobo: number;
   turnaroundHours: number;
   sampleType: string;
+  unit?: string | null;
 }
 
 export interface UpdateTestMenuItemRequest {
@@ -53,6 +69,7 @@ export interface UpdateTestMenuItemRequest {
   priceKobo?: number;
   turnaroundHours?: number;
   sampleType?: string;
+  unit?: string | null;
   isActive?: boolean;
 }
 
@@ -71,7 +88,7 @@ export type OperatingHours = OperatingHoursEntry[];
 // ── Verification Documents ────────────────────────────────────────────────
 
 export type DocType =
-  | "CAC"
+  | "CAC_CERTIFICATE"
   | "MLSCN_LICENSE"
   | "ACCREDITATION_CERT"
   | "TAX_CLEARANCE"

@@ -7,6 +7,8 @@ const PUBLIC_PATHS = [
   "/forgot-password",
   "/reset-password",
   "/pending-approval",
+  "/staff-login",
+  "/accept-invite",
 ];
 
 export function middleware(request: NextRequest) {

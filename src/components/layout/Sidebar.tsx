@@ -11,24 +11,29 @@ import {
   CreditCard,
   Settings,
   User,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLabAuthStore } from "@/store/lab-auth.store";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minTier: null },
-  { href: "/results", label: "Results", icon: FlaskConical, minTier: null },
-  { href: "/bookings", label: "Bookings", icon: CalendarDays, minTier: null },
-  { href: "/pre-analytical", label: "Pre-Analytical", icon: AlertTriangle, minTier: null },
-  { href: "/qa", label: "QA Dashboard", icon: BarChart2, minTier: "BASIC" as const },
-  { href: "/subscription", label: "Subscription", icon: CreditCard, minTier: null },
-  { href: "/profile", label: "Profile", icon: User, minTier: null },
-  { href: "/settings", label: "Settings", icon: Settings, minTier: null },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minTier: null, ownerAdminOnly: false },
+  { href: "/results", label: "Results", icon: FlaskConical, minTier: null, ownerAdminOnly: false },
+  { href: "/bookings", label: "Bookings", icon: CalendarDays, minTier: null, ownerAdminOnly: false },
+  { href: "/pre-analytical", label: "Pre-Analytical", icon: AlertTriangle, minTier: null, ownerAdminOnly: false },
+  { href: "/qa", label: "QA Dashboard", icon: BarChart2, minTier: "BASIC" as const, ownerAdminOnly: false },
+  { href: "/staff", label: "Team", icon: Users, minTier: null, ownerAdminOnly: true },
+  { href: "/subscription", label: "Subscription", icon: CreditCard, minTier: null, ownerAdminOnly: false },
+  { href: "/profile", label: "Profile", icon: User, minTier: null, ownerAdminOnly: false },
+  { href: "/settings", label: "Settings", icon: Settings, minTier: null, ownerAdminOnly: false },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const tier = useLabAuthStore((s) => s.tier);
+  const staffRole = useLabAuthStore((s) => s.staffRole);
+  // Owner = staffRole is null (LabPrincipal) or "OWNER"; Admin = "ADMIN"
+  const isOwnerOrAdmin = staffRole === null || staffRole === "OWNER" || staffRole === "ADMIN";
 
   return (
     <aside className="flex w-60 flex-col border-r border-border bg-sidebar">
@@ -37,7 +42,8 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-2 py-4 space-y-1">
-        {navItems.map(({ href, label, icon: Icon, minTier }) => {
+        {navItems.map(({ href, label, icon: Icon, minTier, ownerAdminOnly }) => {
+          if (ownerAdminOnly && !isOwnerOrAdmin) return null;
           const locked = minTier === "BASIC" && tier === "FREE";
           const active = pathname.startsWith(href);
 

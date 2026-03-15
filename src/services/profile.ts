@@ -16,7 +16,7 @@ export const profileService = {
     api.get<ApiResponse<LabProfile>>("/lab/v1/profile"),
 
   updateProfile: (body: UpdateLabProfileRequest) =>
-    api.put<ApiResponse<LabProfile>>("/lab/v1/profile", body),
+    api.patch<ApiResponse<LabProfile>>("/lab/v1/profile", body),
 
   uploadLogo: (file: File) => {
     const form = new FormData();
@@ -44,7 +44,7 @@ export const profileService = {
     api.get<ApiResponse<OperatingHours>>("/lab/v1/profile/operating-hours"),
 
   updateOperatingHours: (body: OperatingHours) =>
-    api.put<ApiResponse<OperatingHours>>("/lab/v1/profile/operating-hours", body),
+    api.put<ApiResponse<OperatingHours>>("/lab/v1/profile/operating-hours", { hours: body }),
 
   // ── Verification Docs ─────────────────────────────────────────────────────
   getVerificationDocs: () =>
@@ -52,7 +52,7 @@ export const profileService = {
 
   uploadVerificationDoc: (docType: string, file: File) => {
     const form = new FormData();
-    form.append("docType", docType);
+    form.append("metadata", new Blob([JSON.stringify({ docType })], { type: "application/json" }));
     form.append("file", file);
     return api.post<ApiResponse<VerificationDoc>>("/lab/v1/verification/documents", form, {
       headers: { "Content-Type": "multipart/form-data" },

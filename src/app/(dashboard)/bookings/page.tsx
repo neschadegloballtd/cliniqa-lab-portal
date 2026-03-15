@@ -142,7 +142,7 @@ export default function BookingsPage() {
                 {data?.content.map((b) => (
                   <tr key={b.id} className="hover:bg-gray-50">
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
-                      {b.patientPhone ?? b.patientEmail ?? "—"}
+                      {b.pendingPatientPhone ?? b.pendingPatientEmail ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
                       <span className="font-medium">{b.testName}</span>
@@ -174,19 +174,19 @@ export default function BookingsPage() {
             {data && data.totalPages > 1 && (
               <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
                 <p className="text-sm text-gray-600">
-                  Page {data.number + 1} of {data.totalPages}
+                  Page {data.page + 1} of {data.totalPages}
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPage((p) => Math.max(0, p - 1))}
-                    disabled={data.first}
+                    disabled={data.page === 0}
                     className="rounded border px-3 py-1 text-sm disabled:opacity-40"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => setPage((p) => p + 1)}
-                    disabled={data.last}
+                    disabled={data.page >= data.totalPages - 1}
                     className="rounded border px-3 py-1 text-sm disabled:opacity-40"
                   >
                     Next
