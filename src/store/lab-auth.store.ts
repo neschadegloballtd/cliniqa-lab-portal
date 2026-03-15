@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { LabAuthState, LabTier, LabStatus } from "@/types/auth";
+import type { LabAuthState, LabStaffRole, LabTier, LabStatus } from "@/types/auth";
 
 const REFRESH_TOKEN_KEY = "cliniqa_lab_refresh_token";
 
@@ -19,9 +19,26 @@ export const useLabAuthStore = create<LabAuthState>()(
       trialEndDate: null,
       isAuthenticated: false,
       sessionExpired: false,
+      staffId: null,
+      staffRole: null,
+      firstName: null,
+      lastName: null,
 
       setAuth: ({ accessToken, labId, labName, email, tier, status, inTrial, trialEndDate }) => {
-        set({ accessToken, labId, labName, email, tier, status, inTrial, trialEndDate, isAuthenticated: true });
+        set({
+          accessToken, labId, labName, email, tier, status, inTrial, trialEndDate,
+          isAuthenticated: true,
+          staffId: null, staffRole: null, firstName: null, lastName: null,
+        });
+      },
+
+      setStaffAuth: ({ accessToken, labId, staffId, firstName, lastName, staffRole, tier, inTrial, labName }) => {
+        set({
+          accessToken, labId, labName,
+          email: null, status: "ACTIVE", trialEndDate: null,
+          tier, inTrial, isAuthenticated: true,
+          staffId, staffRole, firstName, lastName,
+        });
       },
 
       setAccessToken: (token: string) => {
@@ -48,6 +65,10 @@ export const useLabAuthStore = create<LabAuthState>()(
           trialEndDate: null,
           isAuthenticated: false,
           sessionExpired: false,
+          staffId: null,
+          staffRole: null,
+          firstName: null,
+          lastName: null,
         });
       },
     }),
@@ -67,6 +88,10 @@ export const useLabAuthStore = create<LabAuthState>()(
         inTrial: state.inTrial,
         trialEndDate: state.trialEndDate,
         isAuthenticated: state.isAuthenticated,
+        staffId: state.staffId,
+        staffRole: state.staffRole,
+        firstName: state.firstName,
+        lastName: state.lastName,
       }),
     }
   )

@@ -14,6 +14,7 @@ export interface Booking {
   patientId?: string;
   pendingPatientPhone?: string;
   pendingPatientEmail?: string;
+  testMenuItemId?: string;
   testName: string;
   testCategory?: string;
   appointmentAt?: string;

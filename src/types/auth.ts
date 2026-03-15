@@ -1,5 +1,7 @@
 export type LabTier = "FREE" | "BASIC" | "PREMIUM_B2B";
 
+export type LabStaffRole = "OWNER" | "ADMIN" | "MANAGER" | "TECHNICIAN" | "RECEPTIONIST";
+
 export type LabStatus =
   | "PENDING_VERIFICATION"
   | "PENDING_APPROVAL"
@@ -32,6 +34,20 @@ export interface LabAuthResponse {
   trialEndDate?: string | null;
 }
 
+export interface StaffAuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  labId: string;
+  staffId: string;
+  firstName: string;
+  lastName: string;
+  staffRole: LabStaffRole;
+  tier: LabTier;
+  inTrial: boolean;
+  labName: string;
+}
+
 export interface LabRefreshResponse {
   accessToken: string;
   refreshToken?: string;
@@ -48,6 +64,11 @@ export interface LabAuthState {
   trialEndDate: string | null;
   isAuthenticated: boolean;
   sessionExpired: boolean;
+  /** Staff-only fields — null when the current session belongs to the lab owner */
+  staffId: string | null;
+  staffRole: LabStaffRole | null;
+  firstName: string | null;
+  lastName: string | null;
 
   setAuth: (payload: {
     accessToken: string;
@@ -58,6 +79,17 @@ export interface LabAuthState {
     status: LabStatus;
     inTrial: boolean;
     trialEndDate: string | null;
+  }) => void;
+  setStaffAuth: (payload: {
+    accessToken: string;
+    labId: string;
+    staffId: string;
+    firstName: string;
+    lastName: string;
+    staffRole: LabStaffRole;
+    tier: LabTier;
+    inTrial: boolean;
+    labName: string;
   }) => void;
   setAccessToken: (token: string) => void;
   setSessionExpired: (expired: boolean) => void;
