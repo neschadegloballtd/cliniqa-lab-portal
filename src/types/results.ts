@@ -33,6 +33,8 @@ export interface LabResultPushRequest {
   patientEmail?: string;
   reportDate?: string;
   labReportRef?: string;
+  /** Optional analyser name — enables instrument-scoped QC publish-block. */
+  instrumentName?: string;
   results: LabResultItemRequest[];
 }
 
@@ -126,6 +128,8 @@ export interface LabReportDetailDto {
   authorizedByStaffId?: string;
   authorizedAt?: string;
   authorizationNotes?: string;
+  /** Analyser/instrument that produced this report — null if not specified at push time. */
+  instrumentName?: string;
 }
 
 export interface LabReportSummaryDto {

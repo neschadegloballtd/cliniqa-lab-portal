@@ -74,8 +74,9 @@ function ResolveViolationDialog({
       await resolve({ violationId: violation.id, data: { resolutionNotes: notes.trim() } as ResolveQcViolationRequest });
       toast.success("Violation resolved. Publishing is unblocked if no other unresolved REJECTs remain today.");
       onClose();
-    } catch {
-      toast.error("Failed to resolve violation.");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Failed to resolve violation.");
     }
   };
 
@@ -264,8 +265,9 @@ function LogRunForm({ onSuccess }: { onSuccess: () => void }) {
       }
       setForm({ instrumentName: "", analyte: "", controlLevel: "NORMAL", measuredValue: "", targetMean: "", targetSd: "", runDate: today });
       onSuccess();
-    } catch {
-      toast.error("Failed to log QC run");
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      toast.error(msg ?? "Failed to log QC run");
     }
   };
 
