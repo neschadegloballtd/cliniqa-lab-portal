@@ -1,6 +1,8 @@
 import api from "@/lib/api";
 import type {
+  AcknowledgeCriticalAlertRequest,
   AuthorizationLogEntry,
+  CriticalValueAlert,
   FlagOverrideRequest,
   LabFilePushAcceptedResponse,
   LabOcrStatusResponse,
@@ -120,6 +122,20 @@ export const resultsService = {
   /** Get full authorization audit trail */
   getAuthorizationLog(reportId: string): Promise<ApiResponse<AuthorizationLogEntry[]>> {
     return api.get(`${BASE}/${reportId}/authorization-log`).then((r) => r.data);
+  },
+
+  /** List all critical value alerts for a report (PENDING + ACKNOWLEDGED) */
+  getCriticalAlerts(reportId: string): Promise<ApiResponse<CriticalValueAlert[]>> {
+    return api.get(`${BASE}/${reportId}/critical-alerts`).then((r) => r.data);
+  },
+
+  /** Acknowledge a critical value alert — log callback notes */
+  acknowledgeAlert(
+    reportId: string,
+    alertId: string,
+    data: AcknowledgeCriticalAlertRequest
+  ): Promise<ApiResponse<CriticalValueAlert>> {
+    return api.patch(`${BASE}/${reportId}/critical-alerts/${alertId}/acknowledge`, data).then((r) => r.data);
   },
 };
 
