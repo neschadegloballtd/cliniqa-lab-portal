@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { resultsService } from "@/services/results";
 import type {
+  AcknowledgeCriticalAlertRequest,
   FlagOverrideRequest,
   LabResultPushRequest,
   LabResultRowUpdateRequest,
@@ -12,6 +13,7 @@ const KEYS = {
   ocrStatus: (id: string) => ["reports", id, "ocr-status"] as const,
   pushStatus: (jobId: string) => ["push-status", jobId] as const,
   authLog: (id: string) => ["reports", id, "auth-log"] as const,
+  criticalAlerts: (id: string) => ["reports", id, "critical-alerts"] as const,
 };
 
 export function useReports(
@@ -156,5 +158,26 @@ export function useAuthorizationLog(reportId: string) {
     queryFn: () => resultsService.getAuthorizationLog(reportId),
     select: (data) => data.data,
     enabled: !!reportId,
+  });
+}
+
+export function useCriticalAlerts(reportId: string) {
+  return useQuery({
+    queryKey: KEYS.criticalAlerts(reportId),
+    queryFn: () => resultsService.getCriticalAlerts(reportId),
+    select: (data) => data.data,
+    enabled: !!reportId,
+  });
+}
+
+export function useAcknowledgeAlert(reportId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { alertId: string; data: AcknowledgeCriticalAlertRequest }) =>
+      resultsService.acknowledgeAlert(reportId, vars.alertId, vars.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.criticalAlerts(reportId) });
+      qc.invalidateQueries({ queryKey: KEYS.report(reportId) });
+    },
   });
 }

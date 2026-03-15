@@ -154,3 +154,25 @@ export interface FlagOverrideRequest {
   reviewerNotes: string;
   decision: string;
 }
+
+/** PENDING_CALLBACK = callback has not yet been logged; ACKNOWLEDGED = callback done */
+export type CriticalAlertStatus = "PENDING_CALLBACK" | "ACKNOWLEDGED";
+
+export interface CriticalValueAlert {
+  id: string;
+  reportId: string;
+  resultId: string;
+  testName: string;
+  measuredValue: string;
+  /** Human-readable threshold breached, e.g. "< 5.0 g/dL" */
+  threshold: string;
+  status: CriticalAlertStatus;
+  acknowledgedByStaffId?: string;
+  acknowledgedAt?: string;
+  callbackNotes?: string;
+  createdAt: string;
+}
+
+export interface AcknowledgeCriticalAlertRequest {
+  callbackNotes?: string;
+}

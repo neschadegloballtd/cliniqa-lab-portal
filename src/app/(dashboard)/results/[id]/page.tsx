@@ -14,9 +14,11 @@ import {
   useAuthorizeResult,
   useRevokeAuthorization,
   useAuthorizationLog,
+  useCriticalAlerts,
+  useAcknowledgeAlert,
 } from "@/hooks/useResults";
 import { useLabAuthStore } from "@/store/lab-auth.store";
-import type { AiOutlier, AuthorizationLogEntry, LabResultRowDto, LabResultRowUpdateRequest } from "@/types/results";
+import type { AcknowledgeCriticalAlertRequest, AiOutlier, AuthorizationLogEntry, CriticalValueAlert, LabResultRowDto, LabResultRowUpdateRequest } from "@/types/results";
 
 function SourceBadge({ source }: { source: string }) {
   const map: Record<string, string> = {
@@ -533,6 +535,161 @@ function AuthorizationLogPanel({ reportId }: { reportId: string }) {
   );
 }
 
+interface AcknowledgeAlertDialogProps {
+  reportId: string;
+  alert: CriticalValueAlert;
+  onClose: () => void;
+}
+
+function AcknowledgeAlertDialog({ reportId, alert, onClose }: AcknowledgeAlertDialogProps) {
+  const [notes, setNotes] = useState("");
+  const { mutateAsync: acknowledgeAlert, isPending } = useAcknowledgeAlert(reportId);
+
+  const handleSubmit = async () => {
+    try {
+      await acknowledgeAlert({
+        alertId: alert.id,
+        data: { callbackNotes: notes.trim() || undefined } as AcknowledgeCriticalAlertRequest,
+      });
+      toast.success(`Critical alert for "${alert.testName}" acknowledged`);
+      onClose();
+    } catch {
+      toast.error("Failed to acknowledge alert");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl space-y-4">
+        <h3 className="text-base font-semibold text-gray-900">Acknowledge Critical Alert</h3>
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 space-y-1">
+          <p className="text-sm font-medium text-red-800">{alert.testName}</p>
+          <p className="text-sm text-red-700">
+            Value: <span className="font-medium">{alert.measuredValue}</span>
+            &nbsp;·&nbsp;Threshold: <span className="font-medium">{alert.threshold}</span>
+          </p>
+        </div>
+        <p className="text-sm text-gray-600">
+          Record that the clinical team has been notified of this critical value. Log who was called and the outcome.
+        </p>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Callback Notes <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="e.g. Dr. Adaeze called at 14:32 — patient admitted for IV glucose. Callback received by nurse on duty."
+            className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none"
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isPending}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {isPending ? "Acknowledging…" : "Acknowledge"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CriticalAlertsPanel({ reportId }: { reportId: string }) {
+  const { data: alerts, isLoading } = useCriticalAlerts(reportId);
+  const [selectedAlert, setSelectedAlert] = useState<CriticalValueAlert | null>(null);
+
+  if (isLoading) return null;
+  if (!alerts || alerts.length === 0) return null;
+
+  const pendingCount = alerts.filter((a) => a.status === "PENDING_CALLBACK").length;
+
+  return (
+    <>
+      {selectedAlert && (
+        <AcknowledgeAlertDialog
+          reportId={reportId}
+          alert={selectedAlert}
+          onClose={() => setSelectedAlert(null)}
+        />
+      )}
+      <div className="rounded-xl border border-red-300 bg-white shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-red-200 bg-red-50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-red-600 text-base">🚨</span>
+            <h2 className="text-sm font-semibold text-red-800">
+              Critical Value Alerts ({alerts.length})
+            </h2>
+          </div>
+          {pendingCount > 0 && (
+            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+              {pendingCount} unacknowledged
+            </span>
+          )}
+          {pendingCount === 0 && (
+            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+              All acknowledged
+            </span>
+          )}
+        </div>
+        {pendingCount > 0 && (
+          <div className="px-4 py-2 bg-red-50 border-b border-red-200">
+            <p className="text-xs text-red-700">
+              All critical value alerts must be acknowledged before this report can be published.
+              Log your callback for each alert below.
+            </p>
+          </div>
+        )}
+        <div className="divide-y divide-gray-100">
+          {alerts.map((alert) => (
+            <div key={alert.id} className="px-4 py-3 flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-gray-900">{alert.testName}</span>
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                    alert.status === "PENDING_CALLBACK"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-green-100 text-green-700"
+                  }`}>
+                    {alert.status === "PENDING_CALLBACK" ? "Pending Callback" : "Acknowledged"}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Value: <span className="font-medium text-red-700">{alert.measuredValue}</span>
+                  &nbsp;·&nbsp;Threshold: <span className="font-medium">{alert.threshold}</span>
+                </p>
+                {alert.acknowledgedAt && (
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Acknowledged {format(new Date(alert.acknowledgedAt), "dd MMM yyyy, HH:mm")}
+                    {alert.callbackNotes && <span className="italic"> — &ldquo;{alert.callbackNotes}&rdquo;</span>}
+                  </p>
+                )}
+              </div>
+              {alert.status === "PENDING_CALLBACK" && (
+                <button
+                  onClick={() => setSelectedAlert(alert)}
+                  className="shrink-0 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                >
+                  Acknowledge
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function ReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: reportId } = use(params);
   const router = useRouter();
@@ -910,6 +1067,9 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
             );
           })()}
       </div>
+
+      {/* Critical value alerts */}
+      <CriticalAlertsPanel reportId={reportId} />
 
       {/* Authorization audit trail */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
