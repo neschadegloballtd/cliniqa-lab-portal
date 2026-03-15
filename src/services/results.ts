@@ -4,6 +4,7 @@ import type {
   AuthorizationLogEntry,
   CriticalValueAlert,
   FlagOverrideRequest,
+  QcTodayStatus,
   LabFilePushAcceptedResponse,
   LabOcrStatusResponse,
   LabPushAcceptedResponse,
@@ -136,6 +137,21 @@ export const resultsService = {
     data: AcknowledgeCriticalAlertRequest
   ): Promise<ApiResponse<CriticalValueAlert>> {
     return api.patch(`${BASE}/${reportId}/critical-alerts/${alertId}/acknowledge`, data).then((r) => r.data);
+  },
+
+  /** All PENDING_CALLBACK alerts across all reports for this lab (global dashboard view). */
+  getPendingAlerts(): Promise<ApiResponse<CriticalValueAlert[]>> {
+    return api.get(`${BASE}/critical-alerts/pending`).then((r) => r.data);
+  },
+
+  /** Delete all alerts for a report and re-run detection — use after correcting result values. */
+  rescanAlerts(reportId: string): Promise<void> {
+    return api.post(`${BASE}/${reportId}/critical-alerts/rescan`).then(() => undefined);
+  },
+
+  /** QC publish-block status for today — lets the UI show a pre-flight warning. */
+  getQcTodayStatus(): Promise<ApiResponse<QcTodayStatus>> {
+    return api.get("/lab/v1/qc/today-status").then((r) => r.data);
   },
 };
 

@@ -174,5 +174,11 @@ export interface CriticalValueAlert {
 }
 
 export interface AcknowledgeCriticalAlertRequest {
-  callbackNotes?: string;
+  /** Required: document who was notified, when, and the outcome (ISO 15189 / MLSCN compliance). */
+  callbackNotes: string;
+}
+
+export interface QcTodayStatus {
+  isBlocked: boolean;
+  unresolvedRejectCount: number;
 }

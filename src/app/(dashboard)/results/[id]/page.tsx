@@ -16,6 +16,8 @@ import {
   useAuthorizationLog,
   useCriticalAlerts,
   useAcknowledgeAlert,
+  useRescanAlerts,
+  useQcTodayStatus,
 } from "@/hooks/useResults";
 import { useLabAuthStore } from "@/store/lab-auth.store";
 import type { AcknowledgeCriticalAlertRequest, AiOutlier, AuthorizationLogEntry, CriticalValueAlert, LabResultRowDto, LabResultRowUpdateRequest } from "@/types/results";
@@ -545,11 +547,16 @@ function AcknowledgeAlertDialog({ reportId, alert, onClose }: AcknowledgeAlertDi
   const [notes, setNotes] = useState("");
   const { mutateAsync: acknowledgeAlert, isPending } = useAcknowledgeAlert(reportId);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notes.trim()) {
+      toast.error("Callback notes are required — document who was notified and the outcome.");
+      return;
+    }
     try {
       await acknowledgeAlert({
         alertId: alert.id,
-        data: { callbackNotes: notes.trim() || undefined } as AcknowledgeCriticalAlertRequest,
+        data: { callbackNotes: notes.trim() } as AcknowledgeCriticalAlertRequest,
       });
       toast.success(`Critical alert for "${alert.testName}" acknowledged`);
       onClose();
@@ -560,7 +567,7 @@ function AcknowledgeAlertDialog({ reportId, alert, onClose }: AcknowledgeAlertDi
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl space-y-4">
+      <form onSubmit={handleSubmit} className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl space-y-4">
         <h3 className="text-base font-semibold text-gray-900">Acknowledge Critical Alert</h3>
         <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 space-y-1">
           <p className="text-sm font-medium text-red-800">{alert.testName}</p>
@@ -574,44 +581,57 @@ function AcknowledgeAlertDialog({ reportId, alert, onClose }: AcknowledgeAlertDi
         </p>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Callback Notes <span className="text-gray-400 font-normal">(optional)</span>
+            Callback Notes <span className="text-red-500">*</span>
+            <span className="ml-1 text-xs text-gray-400 font-normal">Required for ISO 15189 / MLSCN compliance</span>
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
+            required
             placeholder="e.g. Dr. Adaeze called at 14:32 — patient admitted for IV glucose. Callback received by nurse on duty."
             className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none"
           />
         </div>
         <div className="flex justify-end gap-2">
           <button
+            type="button"
             onClick={onClose}
             className="rounded-lg border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
-            onClick={handleSubmit}
-            disabled={isPending}
+            type="submit"
+            disabled={isPending || !notes.trim()}
             className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
           >
             {isPending ? "Acknowledging…" : "Acknowledge"}
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
 
 function CriticalAlertsPanel({ reportId }: { reportId: string }) {
   const { data: alerts, isLoading } = useCriticalAlerts(reportId);
+  const { mutateAsync: rescan, isPending: isRescanning } = useRescanAlerts(reportId);
   const [selectedAlert, setSelectedAlert] = useState<CriticalValueAlert | null>(null);
 
   if (isLoading) return null;
   if (!alerts || alerts.length === 0) return null;
 
   const pendingCount = alerts.filter((a) => a.status === "PENDING_CALLBACK").length;
+
+  const handleRescan = async () => {
+    try {
+      await rescan();
+      toast.success("Critical value detection re-run. Alerts refreshed.");
+    } catch {
+      toast.error("Re-scan failed.");
+    }
+  };
 
   return (
     <>
@@ -630,16 +650,26 @@ function CriticalAlertsPanel({ reportId }: { reportId: string }) {
               Critical Value Alerts ({alerts.length})
             </h2>
           </div>
-          {pendingCount > 0 && (
-            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-              {pendingCount} unacknowledged
-            </span>
-          )}
-          {pendingCount === 0 && (
-            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-              All acknowledged
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {pendingCount > 0 && (
+              <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                {pendingCount} unacknowledged
+              </span>
+            )}
+            {pendingCount === 0 && (
+              <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                All acknowledged
+              </span>
+            )}
+            <button
+              onClick={handleRescan}
+              disabled={isRescanning}
+              title="Re-scan result rows for critical values — use after correcting values"
+              className="text-xs text-gray-500 hover:text-gray-700 underline decoration-dotted disabled:opacity-50"
+            >
+              {isRescanning ? "Re-scanning…" : "Re-scan values"}
+            </button>
+          </div>
         </div>
         {pendingCount > 0 && (
           <div className="px-4 py-2 bg-red-50 border-b border-red-200">
@@ -714,6 +744,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
 
   const { mutateAsync: confirmPush, isPending: isConfirming } = useConfirmPush(reportId);
   const { mutateAsync: publishReport, isPending: isPublishing } = usePublishReport();
+  const { data: qcStatus } = useQcTodayStatus();
 
   const handleConfirm = async () => {
     try {
@@ -825,6 +856,11 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
           )}
           {canPublish && (
             <>
+              {qcStatus?.isBlocked && (
+                <span className="inline-flex items-center gap-1 rounded-lg bg-red-50 border border-red-300 px-3 py-2 text-xs font-medium text-red-700">
+                  ⚠️ QC blocked — {qcStatus.unresolvedRejectCount} unresolved Westgard REJECT violation{qcStatus.unresolvedRejectCount !== 1 ? "s" : ""} today
+                </span>
+              )}
               <button
                 onClick={handlePublish}
                 disabled={isPublishing}
