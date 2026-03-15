@@ -16,6 +16,10 @@ import {
 } from "@/hooks/useBookings";
 import type { BookingStatus, PaymentMethod } from "@/types/bookings";
 import { useTestMenu } from "@/hooks/useProfile";
+import { useSamplesByBooking } from "@/hooks/useSamples";
+import { SAMPLE_STATUS_LABELS, SAMPLE_STATUS_COLORS } from "@/types/sample";
+import Link from "next/link";
+import { TestTube2, Plus } from "lucide-react";
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
   PENDING: "bg-yellow-100 text-yellow-800",
@@ -80,6 +84,8 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
   const { mutateAsync: markPaid, isPending: isMarkingPaid } = useMarkPaid(id);
   const { mutateAsync: markWaived, isPending: isMarkingWaived } = useMarkWaived(id);
   const { data: testMenu } = useTestMenu();
+
+  const { data: linkedSamples = [] } = useSamplesByBooking(id);
 
   const [showPayForm, setShowPayForm] = useState(false);
   const [payMethod, setPayMethod] = useState<PaymentMethod>("CASH");
@@ -225,6 +231,48 @@ export default function BookingDetailPage({ params }: { params: Promise<{ id: st
             </li>
           )}
         </ol>
+      </div>
+
+      {/* Linked Samples */}
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+            <TestTube2 className="h-4 w-4" />
+            Samples
+          </h2>
+          <Link
+            href={`/samples/new?bookingId=${id}`}
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Register Sample
+          </Link>
+        </div>
+
+        {linkedSamples.length === 0 ? (
+          <p className="text-sm text-gray-400">No samples registered for this booking yet.</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {linkedSamples.map((sample) => (
+              <div key={sample.id} className="flex items-center justify-between py-2">
+                <div>
+                  <Link
+                    href={`/samples/${sample.id}`}
+                    className="font-mono text-xs text-blue-600 hover:underline"
+                  >
+                    {sample.barcode}
+                  </Link>
+                  {sample.sampleType && (
+                    <span className="ml-2 text-xs text-gray-500">{sample.sampleType}</span>
+                  )}
+                </div>
+                <span className={`rounded px-2 py-0.5 text-xs font-medium ${SAMPLE_STATUS_COLORS[sample.status]}`}>
+                  {SAMPLE_STATUS_LABELS[sample.status]}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Payment card */}

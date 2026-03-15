@@ -13,6 +13,7 @@ import {
   User,
   Users,
   Building2,
+  TestTube2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLabAuthStore } from "@/store/lab-auth.store";
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, minTier: null, ownerAdminOnly: false },
   { href: "/results", label: "Results", icon: FlaskConical, minTier: null, ownerAdminOnly: false },
   { href: "/bookings", label: "Bookings", icon: CalendarDays, minTier: null, ownerAdminOnly: false },
+  { href: "/samples", label: "Samples", icon: TestTube2, minTier: null, ownerAdminOnly: false },
   { href: "/pre-analytical", label: "Pre-Analytical", icon: AlertTriangle, minTier: null, ownerAdminOnly: false },
   { href: "/qa", label: "QA Dashboard", icon: BarChart2, minTier: "BASIC" as const, ownerAdminOnly: false },
   { href: "/staff", label: "Team", icon: Users, minTier: null, ownerAdminOnly: true },
